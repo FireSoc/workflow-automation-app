@@ -4,15 +4,12 @@ import { FolderKanban, Plus } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { customersApi } from '../api/customers';
 import { ProjectForm } from '../components/ui/ProjectForm';
-import { Modal } from '../components/ui/Modal';
-import { PageLoading } from '../components/ui/LoadingSpinner';
-import { EmptyState } from '../components/ui/EmptyState';
-import { Topbar } from '../components/layout/Topbar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { PageLoading } from '@/components/ui/LoadingSpinner';
+import { EmptyState } from '@/components/ui/EmptyState';
 import { useState } from 'react';
 
-/**
- * Resolves default project: most recent company (by created_at) and their most recently created project.
- */
 function getDefaultProjectId(
   projects: { id: number; customer_id: number; created_at: string }[],
   customers: { id: number; created_at: string }[]
@@ -58,36 +55,29 @@ export function ProjectsLanding() {
   }
 
   return (
-    <div>
-      <Topbar />
-      <div className="px-6 py-6">
-        <EmptyState
-          title="No projects yet"
-          description="Create an onboarding project for a customer to get started."
-          icon={<FolderKanban className="h-12 w-12" />}
-          action={
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => setModalOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-              New Project
-            </button>
-          }
-        />
-      </div>
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        title="New Onboarding Project"
-        size="md"
-      >
-        <ProjectForm
-          onSuccess={() => setModalOpen(false)}
-          onCancel={() => setModalOpen(false)}
-        />
-      </Modal>
+    <div className="p-6">
+      <EmptyState
+        title="No projects yet"
+        description="Create an onboarding project for a customer to get started."
+        icon={<FolderKanban className="h-12 w-12 text-muted-foreground" />}
+        action={
+          <Button onClick={() => setModalOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New Project
+          </Button>
+        }
+      />
+      <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Onboarding Project</DialogTitle>
+          </DialogHeader>
+          <ProjectForm
+            onSuccess={() => setModalOpen(false)}
+            onCancel={() => setModalOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }

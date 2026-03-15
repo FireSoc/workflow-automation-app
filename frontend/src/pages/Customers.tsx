@@ -6,11 +6,22 @@ import { customersApi } from '../api/customers';
 import { projectsApi } from '../api/projects';
 import { CustomerTypeBadge } from '../components/ui/StatusBadge';
 import { CustomerForm } from '../components/ui/CustomerForm';
-import { Modal } from '../components/ui/Modal';
-import { PageLoading } from '../components/ui/LoadingSpinner';
-import { ErrorAlert } from '../components/ui/ErrorAlert';
-import { EmptyState } from '../components/ui/EmptyState';
-import { Topbar } from '../components/layout/Topbar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { PageLoading } from '@/components/ui/LoadingSpinner';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { EmptyState } from '@/components/ui/EmptyState';
 
 export function Customers() {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -34,140 +45,116 @@ export function Customers() {
   }
 
   return (
-    <div>
-      <Topbar
-        action={
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => setModalOpen(true)}
-          >
-            <Plus className="h-4 w-4" />
-            New Customer
-          </button>
-        }
-      />
+    <div className="p-6">
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <span />
+        <Button onClick={() => setModalOpen(true)}>
+          <Plus className="h-4 w-4" />
+          New Customer
+        </Button>
+      </div>
 
-      <div className="px-6 py-6">
-        {isPending && <PageLoading />}
+      {isPending && <PageLoading />}
 
-        {isError && (
-          <ErrorAlert
-            message="Failed to load customers. Is the backend running?"
-            onRetry={() => refetch()}
-          />
-        )}
+      {isError && (
+        <ErrorAlert
+          message="Failed to load customers. Is the backend running?"
+          onRetry={() => refetch()}
+        />
+      )}
 
-        {!isPending && !isError && customers?.length === 0 && (
-          <EmptyState
-            title="No customers yet"
-            description="Add your first customer to start an onboarding project."
-            icon={<Building2 className="h-12 w-12" />}
-            action={
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => setModalOpen(true)}
-              >
-                <Plus className="h-4 w-4" />
-                New Customer
-              </button>
-            }
-          />
-        )}
+      {!isPending && !isError && customers?.length === 0 && (
+        <EmptyState
+          title="No customers yet"
+          description="Add your first customer to start an onboarding project."
+          icon={<Building2 className="h-12 w-12 text-muted-foreground" />}
+          action={
+            <Button onClick={() => setModalOpen(true)}>
+              <Plus className="h-4 w-4" />
+              New Customer
+            </Button>
+          }
+        />
+      )}
 
-        {!isPending && !isError && customers && customers.length > 0 && (
-          <div className="card overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-800">
-                All Customers{' '}
-                <span className="ml-1.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500 font-normal">
-                  {customers.length}
-                </span>
-              </h2>
-            </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-100">
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Company
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Type
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Industry
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Created
-                  </th>
-                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
+      {!isPending && !isError && customers && customers.length > 0 && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b pb-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              All Customers
+              <Badge variant="secondary" className="font-normal">
+                {customers.length}
+              </Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="px-5 py-3">Company</TableHead>
+                  <TableHead className="px-5 py-3">Type</TableHead>
+                  <TableHead className="px-5 py-3">Industry</TableHead>
+                  <TableHead className="px-5 py-3">Created</TableHead>
+                  <TableHead className="px-5 py-3 text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {customers.map((customer) => (
-                  <tr key={customer.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-5 py-3.5">
+                  <TableRow key={customer.id}>
+                    <TableCell className="px-5 py-3.5">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-7 w-7 rounded-full bg-brand-100 flex items-center justify-center flex-shrink-0">
-                          <span className="text-xs font-semibold text-brand-700">
+                        <Avatar className="h-7 w-7 rounded-full bg-primary/10">
+                          <AvatarFallback className="text-xs font-semibold text-primary">
                             {customer.company_name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="font-medium text-slate-800">{customer.company_name}</span>
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="font-medium text-foreground">{customer.company_name}</span>
                       </div>
-                    </td>
-                    <td className="px-5 py-3.5">
+                    </TableCell>
+                    <TableCell className="px-5 py-3.5">
                       <CustomerTypeBadge type={customer.customer_type} />
-                    </td>
-                    <td className="px-5 py-3.5 text-slate-600">{customer.industry}</td>
-                    <td className="px-5 py-3.5 text-slate-500">
+                    </TableCell>
+                    <TableCell className="px-5 py-3.5 text-muted-foreground">{customer.industry}</TableCell>
+                    <TableCell className="px-5 py-3.5 text-muted-foreground">
                       {new Date(customer.created_at).toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
                         year: 'numeric',
                       })}
-                    </td>
-                    <td className="px-5 py-3.5 text-right">
+                    </TableCell>
+                    <TableCell className="px-5 py-3.5 text-right">
                       {(() => {
                         const projectId = getMostRecentProjectIdForCustomer(customer.id);
                         return projectId != null ? (
-                          <Link
-                            to={`/projects/${projectId}`}
-                            className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
-                          >
+                          <Link to={`/projects/${projectId}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1">
                             View projects <ArrowRight className="h-3 w-3" />
                           </Link>
                         ) : (
-                          <Link
-                            to={`/projects/list?company=${customer.id}`}
-                            className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
-                          >
+                          <Link to={`/projects/list?company=${customer.id}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1">
                             View projects <ArrowRight className="h-3 w-3" />
                           </Link>
                         );
                       })()}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
-      <Modal
-        isOpen={isModalOpen}
-        onClose={() => setModalOpen(false)}
-        title="New Customer"
-      >
-        <CustomerForm
-          onSuccess={() => setModalOpen(false)}
-          onCancel={() => setModalOpen(false)}
-        />
-      </Modal>
+      <Dialog open={isModalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>New Customer</DialogTitle>
+          </DialogHeader>
+          <CustomerForm
+            onSuccess={() => setModalOpen(false)}
+            onCancel={() => setModalOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }

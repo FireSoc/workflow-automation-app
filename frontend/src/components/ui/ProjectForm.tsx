@@ -5,6 +5,11 @@ import { projectsApi } from '../../api/projects';
 import { customersApi } from '../../api/customers';
 import type { ProjectCreate } from '../../types';
 import { LoadingSpinner } from './LoadingSpinner';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface ProjectFormProps {
   preselectedCustomerId?: number;
@@ -50,20 +55,24 @@ export function ProjectForm({ preselectedCustomerId, onSuccess, onCancel }: Proj
     mutation.mutate(form);
   }
 
+  const selectClass = cn(
+    'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+  );
+
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <div>
-        <label htmlFor="customer_id" className="label">
-          Customer <span className="text-red-500">*</span>
-        </label>
+      <div className="space-y-2">
+        <Label htmlFor="customer_id">
+          Customer <span className="text-destructive">*</span>
+        </Label>
         {loadingCustomers ? (
-          <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
             <LoadingSpinner size="sm" /> Loading customers…
           </div>
         ) : (
           <select
             id="customer_id"
-            className="select"
+            className={selectClass}
             value={form.customer_id}
             onChange={(e) => setForm((f) => ({ ...f, customer_id: Number(e.target.value) }))}
             aria-invalid={!!errors.customer_id}
@@ -78,20 +87,19 @@ export function ProjectForm({ preselectedCustomerId, onSuccess, onCancel }: Proj
           </select>
         )}
         {errors.customer_id && (
-          <p id="customer-error" role="alert" className="mt-1 text-xs text-red-600">
+          <p id="customer-error" role="alert" className="text-xs text-destructive">
             {errors.customer_id}
           </p>
         )}
       </div>
 
-      <div>
-        <label htmlFor="project_name" className="label">
-          Project name <span className="text-slate-400 font-normal">(optional)</span>
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="project_name">
+          Project name <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Input
           id="project_name"
           type="text"
-          className="input"
           placeholder="e.g. Q1 onboarding, Pilot launch"
           value={form.name ?? ''}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value.trim() || undefined }))}
@@ -99,13 +107,13 @@ export function ProjectForm({ preselectedCustomerId, onSuccess, onCancel }: Proj
         />
       </div>
 
-      <div>
-        <label htmlFor="notes" className="label">
-          Notes <span className="text-slate-400 font-normal">(optional)</span>
-        </label>
-        <textarea
+      <div className="space-y-2">
+        <Label htmlFor="notes">
+          Notes <span className="text-muted-foreground font-normal">(optional)</span>
+        </Label>
+        <Textarea
           id="notes"
-          className="input resize-none"
+          className="resize-none"
           rows={3}
           placeholder="Any additional context for this onboarding…"
           value={form.notes ?? ''}
@@ -114,22 +122,22 @@ export function ProjectForm({ preselectedCustomerId, onSuccess, onCancel }: Proj
       </div>
 
       {mutation.isError && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-sm text-destructive">
           {(mutation.error as Error).message}
         </p>
       )}
 
       <div className="flex justify-end gap-2 pt-2">
         {onCancel && (
-          <button type="button" className="btn-secondary" onClick={onCancel}>
+          <Button type="button" variant="secondary" onClick={onCancel}>
             Cancel
-          </button>
+          </Button>
         )}
-        <button type="submit" className="btn-primary" disabled={mutation.isPending || loadingCustomers}>
+        <Button type="submit" disabled={mutation.isPending || loadingCustomers}>
           {mutation.isPending && <LoadingSpinner size="sm" />}
           Create Project
-        </button>
+        </Button>
       </div>
     </form>
-  );
+  )
 }

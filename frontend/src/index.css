@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/geist";
 
 @tailwind base;
 @tailwind components;
@@ -6,45 +9,96 @@
 
 @layer base {
   html {
-    @apply h-full min-h-screen;
+    @apply h-full min-h-screen font-sans;
   }
   body {
-    @apply min-h-screen h-full bg-slate-50 text-slate-900 antialiased;
+    @apply min-h-screen h-full antialiased bg-background text-foreground;
   }
   #root {
     @apply min-h-screen h-full;
   }
+  :root {
+    --background: oklch(0.98 0.002 260);
+    --foreground: oklch(0.2 0.02 260);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.488 0.243 264.376);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.96 0.01 260);
+    --muted-foreground: oklch(0.45 0.02 260);
+    --accent: oklch(0.97 0.02 260);
+    --accent-foreground: oklch(0.25 0.08 264);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.92 0.01 260);
+    --input: oklch(0.92 0.01 260);
+    --ring: oklch(0.55 0.2 264);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --radius: 0.625rem;
+    --sidebar: oklch(0.25 0.08 264);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.55 0.2 264);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.32 0.1 264);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(0.35 0.1 264);
+    --sidebar-ring: oklch(0.55 0.2 264);
+  }
+  .dark {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.809 0.105 251.813);
+    --chart-2: oklch(0.623 0.214 259.815);
+    --chart-3: oklch(0.546 0.245 262.881);
+    --chart-4: oklch(0.488 0.243 264.376);
+    --chart-5: oklch(0.424 0.199 265.638);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+  }
+  .theme {
+    --font-sans: 'Geist Variable', sans-serif;
+  }
+  * {
+    @apply border-border;
+    outline-color: var(--ring);
+  }
 }
 
 @layer components {
-  .btn {
-    @apply inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  /* Minimal input/label utilities for legacy form fragments (BranchComparePanel, SimulationTaskEditor). Prefer shadcn Input/Label elsewhere. */
+  .input-legacy {
+    @apply flex h-8 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
   }
-  .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 focus:ring-brand-500;
-  }
-  .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 focus:ring-brand-500;
-  }
-  .btn-danger {
-    @apply btn bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
-  }
-  .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-800;
-  }
-  .card {
-    @apply bg-white rounded-lg border border-slate-200 shadow-sm;
-  }
-  .input {
-    @apply block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500;
-  }
-  .label {
-    @apply block text-sm font-medium text-slate-700 mb-1;
-  }
-  .select {
-    @apply input pr-8 appearance-none bg-no-repeat;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.5rem center;
-    background-size: 1.5em 1.5em;
+  .label-legacy {
+    @apply text-sm font-medium leading-none;
   }
 }

@@ -2,9 +2,14 @@ import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { crmApi } from '../api/crm';
-import { Topbar } from '../components/layout/Topbar';
-import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { ErrorAlert } from '../components/ui/ErrorAlert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import { cn } from '@/lib/utils';
 import type { DealIngestPayload, CustomerType } from '../types';
 
 const SEGMENTS: { value: CustomerType; label: string }[] = [
@@ -82,181 +87,168 @@ export function ImportDeal() {
         .filter(Boolean),
     }));
 
-  return (
-    <div>
-      <Topbar />
-      <div className="px-6 py-6 max-w-2xl">
-        <p className="text-sm text-slate-600 mb-6">
-          Create an onboarding project from a closed-won deal. This is the same flow used when your CRM sends a deal
-          to <code className="text-xs bg-slate-100 px-1 rounded">POST /crm/deals/ingest</code>. Required fields:
-          company name and CRM source.
-        </p>
-
-        {mutation.isError && (
-          <ErrorAlert
-            message={(mutation.error as Error).message}
-            onRetry={() => mutation.reset()}
-          />
-        )}
-
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <div>
-            <label htmlFor="company_name" className="label">
-              Company name <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="company_name"
-              type="text"
-              className="input"
-              placeholder="e.g. Acme Corp"
-              value={form.company_name ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
-              aria-invalid={!!errors.company_name}
-            />
-            {errors.company_name && (
-              <p role="alert" className="mt-1 text-xs text-red-600">
-                {errors.company_name}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="crm_source" className="label">
-              CRM source <span className="text-red-500">*</span>
-            </label>
-            <input
-              id="crm_source"
-              type="text"
-              className="input"
-              placeholder="e.g. Salesforce, HubSpot, Manual"
-              value={form.crm_source ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, crm_source: e.target.value }))}
-              aria-invalid={!!errors.crm_source}
-            />
-            {errors.crm_source && (
-              <p role="alert" className="mt-1 text-xs text-red-600">
-                {errors.crm_source}
-              </p>
-            )}
-          </div>
-
-          <div>
-            <label htmlFor="segment" className="label">
-              Segment
-            </label>
-            <select
-              id="segment"
-              className="select"
-              value={form.segment}
-              onChange={(e) => setForm((f) => ({ ...f, segment: e.target.value as CustomerType }))}
-            >
-              {SEGMENTS.map(({ value, label }) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="products_purchased" className="label">
-              Products purchased <span className="text-slate-400 font-normal">(comma-separated, optional)</span>
-            </label>
-            <input
-              id="products_purchased"
-              type="text"
-              className="input"
-              placeholder="e.g. core, basic"
-              value={productsStr}
-              onChange={(e) => setProductsStr(e.target.value)}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="target_go_live_date" className="label">
-                Target go-live date
-              </label>
-              <input
-                id="target_go_live_date"
-                type="date"
-                className="input"
-                value={typeof form.target_go_live_date === 'string' ? form.target_go_live_date.slice(0, 10) : ''}
-                onChange={(e) => setForm((f) => ({ ...f, target_go_live_date: e.target.value || null }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="contract_start_date" className="label">
-                Contract start date
-              </label>
-              <input
-                id="contract_start_date"
-                type="date"
-                className="input"
-                value={typeof form.contract_start_date === 'string' ? form.contract_start_date.slice(0, 10) : ''}
-                onChange={(e) => setForm((f) => ({ ...f, contract_start_date: e.target.value || null }))}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="implementation_owner" className="label">
-                Implementation owner
-              </label>
-              <input
-                id="implementation_owner"
-                type="text"
-                className="input"
-                placeholder="e.g. Jane Smith"
-                value={form.implementation_owner ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, implementation_owner: e.target.value || null }))}
-              />
-            </div>
-            <div>
-              <label htmlFor="csm_owner" className="label">
-                CSM owner
-              </label>
-              <input
-                id="csm_owner"
-                type="text"
-                className="input"
-                placeholder="e.g. John Doe"
-                value={form.csm_owner ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, csm_owner: e.target.value || null }))}
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="special_requirements" className="label">
-              Special requirements
-            </label>
-            <textarea
-              id="special_requirements"
-              className="input resize-none"
-              rows={2}
-              placeholder="Any special requirements or notes"
-              value={form.special_requirements ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, special_requirements: e.target.value || null }))}
-            />
-          </div>
-
-          <div className="flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => navigate('/projects')}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={mutation.isPending}>
-              {mutation.isPending && <LoadingSpinner size="sm" />}
-              Import deal & create project
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+  const inputClass = cn(
+    'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
   );
+
+  return (
+    <div className="p-6 max-w-2xl">
+      <p className="text-sm text-muted-foreground mb-6">
+        Create an onboarding project from a closed-won deal. This is the same flow used when your CRM sends a deal
+        to <code className="text-xs bg-muted px-1 rounded">POST /crm/deals/ingest</code>. Required fields:
+        company name and CRM source.
+      </p>
+
+      {mutation.isError && (
+        <ErrorAlert
+          message={(mutation.error as Error).message}
+          onRetry={() => mutation.reset()}
+        />
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Import deal</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} noValidate className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="company_name">
+                Company name <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="company_name"
+                type="text"
+                placeholder="e.g. Acme Corp"
+                value={form.company_name ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, company_name: e.target.value }))}
+                aria-invalid={!!errors.company_name}
+                className={errors.company_name ? 'border-destructive' : ''}
+              />
+              {errors.company_name && (
+                <p role="alert" className="text-xs text-destructive">
+                  {errors.company_name}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="crm_source">
+                CRM source <span className="text-destructive">*</span>
+              </Label>
+              <Input
+                id="crm_source"
+                type="text"
+                placeholder="e.g. Salesforce, HubSpot, Manual"
+                value={form.crm_source ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, crm_source: e.target.value }))}
+                aria-invalid={!!errors.crm_source}
+                className={errors.crm_source ? 'border-destructive' : ''}
+              />
+              {errors.crm_source && (
+                <p role="alert" className="text-xs text-destructive">
+                  {errors.crm_source}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="segment">Segment</Label>
+              <select
+                id="segment"
+                value={form.segment}
+                onChange={(e) => setForm((f) => ({ ...f, segment: e.target.value as CustomerType }))}
+                className={inputClass}
+              >
+                {SEGMENTS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="products_purchased">
+                Products purchased <span className="text-muted-foreground font-normal">(comma-separated, optional)</span>
+              </Label>
+              <Input
+                id="products_purchased"
+                type="text"
+                placeholder="e.g. core, basic"
+                value={productsStr}
+                onChange={(e) => setProductsStr(e.target.value)}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="target_go_live_date">Target go-live date</Label>
+                <Input
+                  id="target_go_live_date"
+                  type="date"
+                  value={typeof form.target_go_live_date === 'string' ? form.target_go_live_date.slice(0, 10) : ''}
+                  onChange={(e) => setForm((f) => ({ ...f, target_go_live_date: e.target.value || null }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contract_start_date">Contract start date</Label>
+                <Input
+                  id="contract_start_date"
+                  type="date"
+                  value={typeof form.contract_start_date === 'string' ? form.contract_start_date.slice(0, 10) : ''}
+                  onChange={(e) => setForm((f) => ({ ...f, contract_start_date: e.target.value || null }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="implementation_owner">Implementation owner</Label>
+                <Input
+                  id="implementation_owner"
+                  type="text"
+                  placeholder="e.g. Jane Smith"
+                  value={form.implementation_owner ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, implementation_owner: e.target.value || null }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="csm_owner">CSM owner</Label>
+                <Input
+                  id="csm_owner"
+                  type="text"
+                  placeholder="e.g. John Doe"
+                  value={form.csm_owner ?? ''}
+                  onChange={(e) => setForm((f) => ({ ...f, csm_owner: e.target.value || null }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="special_requirements">Special requirements</Label>
+              <Textarea
+                id="special_requirements"
+                rows={2}
+                placeholder="Any special requirements or notes"
+                value={form.special_requirements ?? ''}
+                onChange={(e) => setForm((f) => ({ ...f, special_requirements: e.target.value || null }))}
+                className="resize-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => navigate('/projects')}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={mutation.isPending}>
+                {mutation.isPending && <LoadingSpinner size="sm" />}
+                Import deal & create project
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  )
 }

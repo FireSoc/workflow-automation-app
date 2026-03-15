@@ -77,7 +77,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
               <tr key={i} className="hover:bg-slate-50 transition-colors">
                 <td className="px-2 py-2">
                   <input
-                    className="input text-xs py-1 min-w-[10rem]"
+                    className="input-legacy text-xs py-1 min-w-[10rem] h-7"
                     type="text"
                     placeholder="Task title"
                     value={task.title}
@@ -87,7 +87,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <select
-                    className="select text-xs py-1"
+                    className="input-legacy text-xs py-1 h-7 pr-8 bg-no-repeat bg-[length:1rem] bg-[right_0.25rem_center]"
                     value={task.stage}
                     onChange={(e) => update(i, { stage: e.target.value as OnboardingStage })}
                     aria-label={`Task ${i + 1} stage`}
@@ -99,7 +99,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <input
-                    className="input text-xs py-1 w-16 text-center"
+                    className="input-legacy text-xs py-1 w-16 text-center h-7"
                     type="number"
                     min={0}
                     value={task.due_offset_days}
@@ -109,7 +109,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <input
-                    className="input text-xs py-1 w-16 text-center"
+                    className="input-legacy text-xs py-1 w-16 text-center h-7"
                     type="number"
                     min={1}
                     value={task.estimated_duration_days ?? 1}
@@ -119,7 +119,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <select
-                    className="select text-xs py-1 w-24"
+                    className="input-legacy text-xs py-1 w-24 h-7 pr-8"
                     value={task.criticality ?? 2}
                     onChange={(e) => update(i, { criticality: Number(e.target.value) })}
                     aria-label={`Task ${i + 1} criticality`}
@@ -132,7 +132,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <input
-                    className="input text-xs py-1 w-12 text-center"
+                    className="input-legacy text-xs py-1 w-12 text-center h-7"
                     type="number"
                     min={0}
                     value={task.dependency_count ?? 0}
@@ -142,7 +142,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <input
-                    className="input text-xs py-1 w-12 text-center"
+                    className="input-legacy text-xs py-1 w-12 text-center h-7"
                     type="number"
                     min={0}
                     max={3}
@@ -180,7 +180,7 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                 </td>
                 <td className="px-2 py-2">
                   <input
-                    className="input text-xs py-1 w-12 text-center"
+                    className="input-legacy text-xs py-1 w-12 text-center h-7"
                     type="number"
                     min={0}
                     value={task.delay_days ?? 0}

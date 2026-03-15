@@ -32,7 +32,19 @@ import { EventFeed } from '../components/ui/EventFeed';
 import { PageLoading, LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { ErrorAlert } from '../components/ui/ErrorAlert';
 import { EmptyState } from '../components/ui/EmptyState';
-import { Topbar } from '../components/layout/Topbar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge as ShadcnBadge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import type { Task } from '../types';
 
 function TaskRow({
@@ -47,11 +59,11 @@ function TaskRow({
   const isActionable = task.status !== 'completed' && task.status !== 'blocked';
 
   return (
-    <tr className={`border-b border-slate-100 last:border-0 ${task.status === 'overdue' ? 'bg-red-50/40' : 'hover:bg-slate-50'} transition-colors`}>
-      <td className="px-5 py-3.5">
+    <TableRow className={cn(task.status === 'overdue' && 'bg-destructive/5')}>
+      <TableCell className="px-5 py-3.5">
         <div>
           <div className="flex items-center gap-1.5">
-            <span className={`text-sm font-medium ${task.status === 'completed' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
+            <span className={cn('text-sm font-medium', task.status === 'completed' && 'text-muted-foreground line-through')}>
               {task.title}
             </span>
             {task.required_for_stage_completion && (
@@ -67,26 +79,26 @@ function TaskRow({
             )}
           </div>
           {task.description && (
-            <p className="mt-0.5 text-xs text-slate-500 line-clamp-1">{task.description}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{task.description}</p>
           )}
         </div>
-      </td>
-      <td className="px-5 py-3.5">
+      </TableCell>
+      <TableCell className="px-5 py-3.5">
         <TaskStatusBadge status={task.status} />
-      </td>
-      <td className="px-5 py-3.5">
+      </TableCell>
+      <TableCell className="px-5 py-3.5">
         {task.assigned_to ? (
-          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-            <User className="h-3.5 w-3.5 text-slate-400" />
+          <div className="flex items-center gap-1.5 text-xs text-foreground">
+            <User className="h-3.5 w-3.5 text-muted-foreground" />
             {task.assigned_to}
           </div>
         ) : (
-          <span className="text-xs text-slate-400">Unassigned</span>
+          <span className="text-xs text-muted-foreground">Unassigned</span>
         )}
-      </td>
-      <td className="px-5 py-3.5">
+      </TableCell>
+      <TableCell className="px-5 py-3.5">
         {task.due_date ? (
-          <div className={`flex items-center gap-1 text-xs ${task.status === 'overdue' ? 'text-red-600 font-medium' : 'text-slate-500'}`}>
+          <div className={cn('flex items-center gap-1 text-xs', task.status === 'overdue' && 'text-destructive font-medium')}>
             <Calendar className="h-3.5 w-3.5" />
             {new Date(task.due_date).toLocaleDateString('en-US', {
               month: 'short',
@@ -94,14 +106,15 @@ function TaskRow({
             })}
           </div>
         ) : (
-          <span className="text-xs text-slate-400">—</span>
+          <span className="text-xs text-muted-foreground">—</span>
         )}
-      </td>
-      <td className="px-5 py-3.5 text-right">
+      </TableCell>
+      <TableCell className="px-5 py-3.5 text-right">
         {isActionable && (
-          <button
+          <Button
             type="button"
-            className="btn-secondary text-xs py-1"
+            variant="secondary"
+            size="sm"
             onClick={() => onComplete(task.id)}
             disabled={isCompleting}
           >
@@ -111,10 +124,10 @@ function TaskRow({
               <CheckCircle2 className="h-3.5 w-3.5" />
             )}
             Mark Complete
-          </button>
+          </Button>
         )}
-      </td>
-    </tr>
+      </TableCell>
+    </TableRow>
   );
 }
 
@@ -235,11 +248,8 @@ export function ProjectDetail() {
 
   if (isError || !project) {
     return (
-      <div>
-        <Topbar />
-        <div className="px-6 py-6">
-          <ErrorAlert message="Could not load project." onRetry={() => refetch()} />
-        </div>
+      <div className="p-6">
+        <ErrorAlert message="Could not load project." onRetry={() => refetch()} />
       </div>
     );
   }
@@ -262,132 +272,116 @@ export function ProjectDetail() {
   const customerMap = new Map(customers?.map((c) => [c.id, c]) ?? []);
 
   return (
-    <div>
-      <Topbar
-        action={
-          <Link
-            to="/projects/list"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-brand-600 transition-colors"
+    <div className="p-6 space-y-6">
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="flex items-center gap-2">
+          <Label htmlFor="project-detail-company" className="text-sm font-medium">
+            Company
+          </Label>
+          <select
+            id="project-detail-company"
+            value={project.customer_id}
+            onChange={(e) => handleCompanyChange(Number(e.target.value))}
+            aria-label="Switch company"
+            className="flex h-8 w-48 rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            <ChevronLeft className="h-4 w-4" />
-            All onboarding projects
-          </Link>
-        }
-      />
-
-      <div className="px-6 py-6 space-y-6">
-        <div className="flex flex-wrap items-center gap-4">
-          <div>
-            <label htmlFor="project-detail-company" className="label inline-block mb-0 mr-2">
-              Company
-            </label>
-            <select
-              id="project-detail-company"
-              className="select w-48"
-              value={project.customer_id}
-              onChange={(e) => handleCompanyChange(Number(e.target.value))}
-              aria-label="Switch company"
-            >
-              {(customers ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.company_name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="project-detail-project" className="label inline-block mb-0 mr-2">
-              Project
-            </label>
-            <select
-              id="project-detail-project"
-              className="select w-56"
-              value={project.id}
-              onChange={(e) => handleProjectChange(Number(e.target.value))}
-              aria-label="Switch project"
-              disabled={projectsForCompany.length === 0}
-            >
-              {projectsForCompany.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name ?? `${customerMap.get(p.customer_id)?.company_name ?? `Customer #${p.customer_id}`} — #${p.id}`}
-                </option>
-              ))}
-            </select>
-          </div>
+            {(customers ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.company_name}
+              </option>
+            ))}
+          </select>
         </div>
-
-        {/* Action feedback banner */}
-        {actionMsg && (
-          <div
-            className={`rounded-lg px-4 py-3 text-sm font-medium border ${
-              actionMsg.type === 'success'
-                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                : 'bg-blue-50 border-blue-200 text-blue-700'
-            }`}
-            role="status"
+        <div className="flex items-center gap-2">
+          <Label htmlFor="project-detail-project" className="text-sm font-medium">
+            Project
+          </Label>
+          <select
+            id="project-detail-project"
+            value={project.id}
+            onChange={(e) => handleProjectChange(Number(e.target.value))}
+            aria-label="Switch project"
+            disabled={projectsForCompany.length === 0}
+            className="flex h-8 w-56 rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
           >
-            {actionMsg.text}
-          </div>
-        )}
+            {projectsForCompany.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name ?? `${customerMap.get(p.customer_id)?.company_name ?? `Customer #${p.customer_id}`} — #${p.id}`}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Link to="/projects/list" className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline inline-flex items-center gap-1">
+          <ChevronLeft className="h-4 w-4" />
+          All onboarding projects
+        </Link>
+      </div>
+
+      {actionMsg && (
+        <Card className={cn(actionMsg.type === 'success' ? 'border-emerald-200 bg-emerald-50/50' : 'border-primary/30 bg-primary/5')}>
+          <CardContent className="py-3">
+            <p className={cn('text-sm font-medium', actionMsg.type === 'success' ? 'text-emerald-700' : 'text-primary')} role="status">
+              {actionMsg.text}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
           {/* Left column: summary + tasks */}
           <div className="xl:col-span-2 space-y-6">
 
-            {/* Project summary card */}
-            <section className="card p-5" aria-labelledby="project-summary">
-              <div className="flex items-start justify-between gap-4 mb-5">
-                <div>
-                  <h2 id="project-summary" className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-                    {project.name ?? customer?.company_name ?? `Project #${project.id}`}
-                    {project.risk_flag && (
-                      <AlertTriangle className="h-4 w-4 text-red-500" aria-label="At risk" />
-                    )}
-                  </h2>
-                  <p className="text-sm text-slate-500 mt-0.5">
+            <section aria-labelledby="project-summary">
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+                  <div>
+                    <CardTitle id="project-summary" className="text-lg flex items-center gap-2">
+                      {project.name ?? customer?.company_name ?? `Project #${project.id}`}
+                      {project.risk_flag && (
+                        <AlertTriangle className="h-4 w-4 text-destructive" aria-label="At risk" />
+                      )}
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
                     {project.name
                       ? `${customer?.company_name ?? 'Customer'} · #${project.id}`
                       : `Onboarding Project #${project.id}`}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <StageBadge stage={project.current_stage} />
-                  <ProjectStatusBadge status={project.status} />
-                </div>
-              </div>
-
-              {/* Stage progress */}
-              <StageProgress currentStage={project.current_stage} status={project.status} />
-
-              {/* Meta row */}
-              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600 border-t border-slate-100 pt-4">
-                {customer && (
-                  <div className="flex items-center gap-1.5">
-                    <Building2 className="h-4 w-4 text-slate-400" />
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <StageBadge stage={project.current_stage} />
+                    <ProjectStatusBadge status={project.status} />
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <StageProgress currentStage={project.current_stage} status={project.status} />
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground border-t border-border pt-4">
+                    {customer && (
+                      <div className="flex items-center gap-1.5">
+                        <Building2 className="h-4 w-4 text-muted-foreground" />
                     <span>{customer.company_name}</span>
                     <CustomerTypeBadge type={customer.customer_type} />
                   </div>
-                )}
-                {customer?.industry && (
-                  <div className="flex items-center gap-1.5">
-                    <FileText className="h-4 w-4 text-slate-400" />
-                    <span>{customer.industry}</span>
-                  </div>
-                )}
-                {(project.target_go_live_date || project.projected_go_live_date) && (
-                  <div className="flex items-center gap-1.5">
-                    <Target className="h-4 w-4 text-slate-400" />
+                    )}
+                    {customer?.industry && (
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span>{customer.industry}</span>
+                      </div>
+                    )}
+                    {(project.target_go_live_date || project.projected_go_live_date) && (
+                      <div className="flex items-center gap-1.5">
+                        <Target className="h-4 w-4 text-muted-foreground" />
                     <span>
                       Go-live: {project.projected_go_live_date
                         ? new Date(project.projected_go_live_date).toLocaleDateString('en-US')
                         : project.target_go_live_date
                           ? new Date(project.target_go_live_date).toLocaleDateString('en-US')
                           : '—'}
-                    </span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5">
-                  <Clock className="h-4 w-4 text-slate-400" />
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
                   <span>
                     Created{' '}
                     {new Date(project.created_at).toLocaleDateString('en-US', {
@@ -396,238 +390,218 @@ export function ProjectDetail() {
                       year: 'numeric',
                     })}
                   </span>
-                </div>
-                {project.notes && (
-                  <div className="flex items-start gap-1.5 w-full">
-                    <FileText className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                    <span className="text-slate-500 italic">{project.notes}</span>
+                    </div>
+                    {project.notes && (
+                      <div className="flex items-start gap-1.5 w-full">
+                        <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                        <span className="text-muted-foreground italic">{project.notes}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
+                </CardContent>
+              </Card>
             </section>
 
-            {/* Risk explanation */}
             {(project.risk_flag || (risk && risk.explanations?.length)) && (
-              <section className="card p-5 border-red-100 bg-red-50/30" aria-labelledby="risk-heading">
-                <h2 id="risk-heading" className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
-                  <ShieldAlert className="h-4 w-4 text-red-500" />
-                  Risk {risk?.risk_level && `(${risk.risk_level})`}
-                </h2>
-                <ul className="text-sm text-slate-700 list-disc list-inside space-y-0.5">
-                  {(risk?.explanations ?? riskSignals.map((s) => s.description)).map((text, i) => (
-                    <li key={i}>{text}</li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* Blockers */}
-            {blockedTasks.length > 0 && (
-              <section className="card p-5 border-amber-200 bg-amber-50/30" aria-labelledby="blockers-heading">
-                <h2 id="blockers-heading" className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  Blockers
-                </h2>
-                <ul className="text-sm text-slate-700 space-y-1">
-                  {blockedTasks.map((t) => (
-                    <li key={t.id}>
-                      <span className="font-medium">{t.title}</span>
-                      {t.blocker_reason && ` — ${t.blocker_reason}`}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
-
-            {/* Next best action & recommendations */}
-            {(project.next_best_action || recommendations.length > 0) && (
-              <section className="card p-5" aria-labelledby="next-heading">
-                <h2 id="next-heading" className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
-                  <Lightbulb className="h-4 w-4 text-brand-600" />
-                  Next best action
-                </h2>
-                {project.next_best_action && (
-                  <p className="text-sm text-slate-700">{project.next_best_action}</p>
-                )}
-                {recommendations.length > 0 && (
-                  <ul className="mt-2 text-sm text-slate-600 space-y-1">
-                    {recommendations.map((r) => (
-                      <li key={r.id}>{r.label ?? r.action_type}</li>
+              <Card className="border-destructive/30 bg-destructive/5" aria-labelledby="risk-heading">
+                <CardHeader>
+                  <CardTitle id="risk-heading" className="text-sm flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-destructive" />
+                    Risk {risk?.risk_level && `(${risk.risk_level})`}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm text-foreground list-disc list-inside space-y-0.5">
+                    {(risk?.explanations ?? riskSignals.map((s) => s.description)).map((text, i) => (
+                      <li key={i}>{text}</li>
                     ))}
                   </ul>
-                )}
-              </section>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Summary */}
+            {blockedTasks.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/30" aria-labelledby="blockers-heading">
+                <CardHeader>
+                  <CardTitle id="blockers-heading" className="text-sm flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-600" />
+                    Blockers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="text-sm text-foreground space-y-1">
+                    {blockedTasks.map((t) => (
+                      <li key={t.id}>
+                        <span className="font-medium">{t.title}</span>
+                        {t.blocker_reason && ` — ${t.blocker_reason}`}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            )}
+
+            {(project.next_best_action || recommendations.length > 0) && (
+              <Card aria-labelledby="next-heading">
+                <CardHeader>
+                  <CardTitle id="next-heading" className="text-sm flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-primary" />
+                    Next best action
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {project.next_best_action && (
+                    <p className="text-sm text-foreground">{project.next_best_action}</p>
+                  )}
+                  {recommendations.length > 0 && (
+                    <ul className="mt-2 text-sm text-muted-foreground space-y-1">
+                      {recommendations.map((r) => (
+                        <li key={r.id}>{r.label ?? r.action_type}</li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {summary && (
-              <section className="card p-5" aria-labelledby="summary-heading">
-                <h2 id="summary-heading" className="text-sm font-semibold text-slate-800 mb-3">
-                  Summary
-                </h2>
-                <dl className="text-sm space-y-2">
-                  <div>
-                    <dt className="text-slate-500">Complete</dt>
-                    <dd className="text-slate-800">{summary.what_is_complete}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Blocked</dt>
-                    <dd className="text-slate-800">{summary.what_is_blocked}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Risk</dt>
-                    <dd className="text-slate-800">{summary.why_risk_elevated}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Next</dt>
-                    <dd className="text-slate-800">{summary.what_happens_next}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-slate-500">Go-live</dt>
-                    <dd className="text-slate-800">{summary.go_live_realistic}</dd>
-                  </div>
-                </dl>
-              </section>
+              <Card aria-labelledby="summary-heading">
+                <CardHeader>
+                  <CardTitle id="summary-heading" className="text-sm">Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <dl className="text-sm space-y-2">
+                    <div>
+                      <dt className="text-muted-foreground">Complete</dt>
+                      <dd className="text-foreground">{summary.what_is_complete}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Blocked</dt>
+                      <dd className="text-foreground">{summary.what_is_blocked}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Risk</dt>
+                      <dd className="text-foreground">{summary.why_risk_elevated}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Next</dt>
+                      <dd className="text-foreground">{summary.what_happens_next}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Go-live</dt>
+                      <dd className="text-foreground">{summary.go_live_realistic}</dd>
+                    </div>
+                  </dl>
+                </CardContent>
+              </Card>
             )}
 
-            {/* Task actions bar */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <div className="flex items-center gap-2 text-sm text-slate-600 mr-auto">
-                <span className="font-medium">{completedTaskCount}/{tasks.length}</span>
-                <span className="text-slate-400">tasks completed</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="mr-auto flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="font-medium text-foreground">{completedTaskCount}/{tasks.length}</span>
+                <span>tasks completed</span>
                 {overdueTaskCount > 0 && (
-                  <span className="flex items-center gap-1 text-red-600 font-medium">
+                  <span className="flex items-center gap-1 text-destructive font-medium">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     {overdueTaskCount} overdue
                   </span>
                 )}
               </div>
-              <button
-                type="button"
-                className="btn-secondary text-sm"
-                onClick={() => checkOverdueMutation.mutate()}
-                disabled={checkOverdueMutation.isPending}
-              >
-                {checkOverdueMutation.isPending ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <Clock className="h-4 w-4" />
-                )}
+              <Button variant="secondary" size="sm" onClick={() => checkOverdueMutation.mutate()} disabled={checkOverdueMutation.isPending}>
+                {checkOverdueMutation.isPending ? <LoadingSpinner size="sm" /> : <Clock className="h-4 w-4" />}
                 Check Overdue
-              </button>
-              <button
-                type="button"
-                className={`btn text-sm ${project.risk_flag ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500' : 'btn-secondary'}`}
+              </Button>
+              <Button
+                variant={project.risk_flag ? 'destructive' : 'secondary'}
+                size="sm"
                 onClick={() => checkRiskMutation.mutate()}
                 disabled={checkRiskMutation.isPending}
               >
-                {checkRiskMutation.isPending ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <ShieldAlert className="h-4 w-4" />
-                )}
+                {checkRiskMutation.isPending ? <LoadingSpinner size="sm" /> : <ShieldAlert className="h-4 w-4" />}
                 Check Risk
-              </button>
-              <button
-                type="button"
-                className="btn-secondary text-sm"
-                onClick={() => recalculateRiskMutation.mutate()}
-                disabled={recalculateRiskMutation.isPending}
-              >
-                {recalculateRiskMutation.isPending ? (
-                  <LoadingSpinner size="sm" />
-                ) : (
-                  <ShieldAlert className="h-4 w-4" />
-                )}
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => recalculateRiskMutation.mutate()} disabled={recalculateRiskMutation.isPending}>
+                {recalculateRiskMutation.isPending ? <LoadingSpinner size="sm" /> : <ShieldAlert className="h-4 w-4" />}
                 Recalculate Risk
-              </button>
+              </Button>
               {project.status !== 'completed' && (
-                <button
-                  type="button"
-                  className="btn text-sm bg-brand-600 text-white hover:bg-brand-700"
-                  onClick={() => advanceStageMutation.mutate()}
-                  disabled={advanceStageMutation.isPending}
-                >
-                  {advanceStageMutation.isPending ? (
-                    <LoadingSpinner size="sm" />
-                  ) : (
-                    <ArrowRightCircle className="h-4 w-4" />
-                  )}
+                <Button size="sm" onClick={() => advanceStageMutation.mutate()} disabled={advanceStageMutation.isPending}>
+                  {advanceStageMutation.isPending ? <LoadingSpinner size="sm" /> : <ArrowRightCircle className="h-4 w-4" />}
                   Advance Stage
-                </button>
+                </Button>
               )}
             </div>
 
-            {/* Tasks table */}
             <section aria-labelledby="tasks-heading">
-              <div className="card overflow-hidden">
-                <div className="px-5 py-4 border-b border-slate-100">
-                  <h3 id="tasks-heading" className="text-sm font-semibold text-slate-800">
+              <Card>
+                <CardHeader className="border-b pb-4">
+                  <CardTitle id="tasks-heading" className="text-sm">
                     Tasks
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     <Star className="h-3 w-3 text-amber-500 fill-amber-400 inline mr-0.5" />
                     Required for stage gate
                   </p>
-                </div>
-
-                {tasks.length === 0 ? (
-                  <EmptyState title="No tasks" description="Tasks will be generated when the project is created." />
-                ) : (
-                  Object.entries(tasksByStage).map(([stage, stageTasks]) => (
-                    <div key={stage}>
-                      <div className="px-5 py-2 bg-slate-50 border-b border-slate-100">
-                        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                          {stage.replace('_', ' ')} Stage
-                        </span>
-                      </div>
-                      <table className="w-full text-sm">
-                        <thead className="sr-only">
-                          <tr>
-                            <th>Task</th>
-                            <th>Status</th>
-                            <th>Assigned To</th>
-                            <th>Due Date</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {stageTasks.map((task) => (
-                            <TaskRow
-                              key={task.id}
-                              task={task}
-                              onComplete={(taskId) => completeTaskMutation.mutate(taskId)}
-                              isCompleting={completingTaskId === task.id}
-                            />
-                          ))}
-                        </tbody>
-                      </table>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {tasks.length === 0 ? (
+                    <div className="p-6">
+                      <EmptyState title="No tasks" description="Tasks will be generated when the project is created." />
                     </div>
-                  ))
-                )}
-              </div>
+                  ) : (
+                    Object.entries(tasksByStage).map(([stage, stageTasks]) => (
+                      <div key={stage}>
+                        <div className="px-5 py-2 bg-muted/50 border-b border-border">
+                          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            {stage.replace('_', ' ')} Stage
+                          </span>
+                        </div>
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="sr-only">
+                              <TableHead>Task</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead>Assigned To</TableHead>
+                              <TableHead>Due Date</TableHead>
+                              <TableHead>Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {stageTasks.map((task) => (
+                              <TaskRow
+                                key={task.id}
+                                task={task}
+                                onComplete={(taskId) => completeTaskMutation.mutate(taskId)}
+                                isCompleting={completingTaskId === task.id}
+                              />
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
             </section>
           </div>
 
-          {/* Right column: events */}
           <aside>
-            <section className="card" aria-labelledby="events-heading">
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
-                <Activity className="h-4 w-4 text-slate-400" />
-                <h3 id="events-heading" className="text-sm font-semibold text-slate-800">
+            <Card aria-labelledby="events-heading">
+              <CardHeader className="flex flex-row items-center gap-2 border-b pb-4">
+                <Activity className="h-4 w-4 text-muted-foreground" />
+                <CardTitle id="events-heading" className="text-sm">
                   Activity
-                </h3>
-                <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                </CardTitle>
+                <ShadcnBadge variant="secondary" className="ml-auto font-normal">
                   {events.length}
-                </span>
-              </div>
-              <div className="px-5 py-4">
+                </ShadcnBadge>
+              </CardHeader>
+              <CardContent>
                 <EventFeed events={events} />
-              </div>
-            </section>
+              </CardContent>
+            </Card>
           </aside>
         </div>
-      </div>
     </div>
   );
 }

@@ -174,7 +174,7 @@ export function BranchEditor({ branches, baselineTasks, onChange }: BranchEditor
         >
           <div className="flex items-center justify-between gap-2">
             <input
-              className="input text-sm py-1 flex-1 max-w-xs"
+              className="input-legacy text-sm py-1 flex-1 max-w-xs h-8"
               type="text"
               placeholder="Branch name"
               value={branch.name}
@@ -194,9 +194,9 @@ export function BranchEditor({ branches, baselineTasks, onChange }: BranchEditor
           {/* Assumption overrides */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
-              <label className="label text-xs">Customer delay (days)</label>
+              <label className="label-legacy text-xs">Customer delay (days)</label>
               <input
-                className="input text-xs py-1"
+                className="input-legacy text-xs py-1 h-7"
                 type="number"
                 step={0.5}
                 min={0}
@@ -208,9 +208,9 @@ export function BranchEditor({ branches, baselineTasks, onChange }: BranchEditor
               />
             </div>
             <div>
-              <label className="label text-xs">Internal delay (days)</label>
+              <label className="label-legacy text-xs">Internal delay (days)</label>
               <input
-                className="input text-xs py-1"
+                className="input-legacy text-xs py-1 h-7"
                 type="number"
                 step={0.5}
                 min={0}
@@ -225,7 +225,7 @@ export function BranchEditor({ branches, baselineTasks, onChange }: BranchEditor
 
           {/* Task due-date overrides — simple title + offset pairs */}
           <div>
-            <p className="label text-xs mb-2">Override specific task deadlines (by title)</p>
+            <p className="label-legacy text-xs mb-2">Override specific task deadlines (by title)</p>
             <div className="space-y-2">
               {(branch.task_overrides ?? []).map((ov, j) => (
                 <div key={j} className="flex gap-2 items-center">
@@ -248,7 +248,7 @@ export function BranchEditor({ branches, baselineTasks, onChange }: BranchEditor
                   <div className="flex items-center gap-1">
                     <label className="text-xs text-slate-500 whitespace-nowrap">Due (days)</label>
                     <input
-                      className="input text-xs py-1 w-16 text-center"
+                      className="input-legacy text-xs py-1 w-16 text-center h-7"
                       type="number"
                       min={0}
                       value={ov.due_offset_days}
