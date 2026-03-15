@@ -1,5 +1,6 @@
 """
-Seed onboarding playbooks for SMB and Enterprise. Run from backend directory:
+Seed onboarding playbooks for SMB, Mid-Market, Enterprise, CRM Deal, and Compliance/Regulated.
+Run from backend directory:
 
     cd backend && python scripts/seed_playbooks.py
 
@@ -7,7 +8,7 @@ Or from repo root with PYTHONPATH=backend:
 
     PYTHONPATH=backend python backend/scripts/seed_playbooks.py
 
-Idempotent: creates a playbook per segment only if one does not already exist.
+Idempotent: creates each playbook by name only if it does not already exist (multiple playbooks per segment allowed).
 """
 
 import sys
@@ -151,7 +152,188 @@ ENTERPRISE_PLAYBOOK = PlaybookCreate(
     duration_rules=DURATION_RULES,
 )
 
-PLAYBOOKS = [SMB_PLAYBOOK, ENTERPRISE_PLAYBOOK]
+MID_MARKET_PLAYBOOK = PlaybookCreate(
+    name="Mid-Market Standard",
+    segment=CustomerType.MID_MARKET,
+    supported_products=["core", "advanced"],
+    default_stages=STAGE_ORDER_STR,
+    default_tasks=[
+        TaskTemplate(
+            stage="kickoff",
+            title="Sign contract and collect billing info",
+            description="Customer signs and returns contract; collect payment details.",
+            assigned_to="implementation_owner",
+            due_offset_days=3,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            task_type="customer",
+        ),
+        TaskTemplate(
+            stage="kickoff",
+            title="Schedule kickoff call",
+            description="Confirm kickoff date and key stakeholders.",
+            assigned_to="implementation_owner",
+            due_offset_days=5,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="kickoff",
+            title="Send welcome pack and light discovery form",
+            description="Email welcome pack and short discovery questionnaire.",
+            assigned_to="csm_owner",
+            due_offset_days=7,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Provision account and configure base settings",
+            description="Create tenant and apply segment defaults.",
+            assigned_to="implementation_owner",
+            due_offset_days=7,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Light security and preferences",
+            description="Customer confirms security requirements and completes profile.",
+            assigned_to="csm_owner",
+            due_offset_days=10,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            requires_setup_data=True,
+            task_type="customer",
+        ),
+    ],
+    duration_rules=DURATION_RULES,
+)
+
+CRM_DEAL_PLAYBOOK = PlaybookCreate(
+    name="CRM Deal",
+    segment=CustomerType.SMB,
+    supported_products=["core", "basic"],
+    default_stages=STAGE_ORDER_STR,
+    default_tasks=[
+        TaskTemplate(
+            stage="kickoff",
+            title="Confirm deal and collect billing info",
+            description="Confirm closed-won details and payment method.",
+            assigned_to="implementation_owner",
+            due_offset_days=2,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            task_type="customer",
+        ),
+        TaskTemplate(
+            stage="kickoff",
+            title="Send welcome and activation guide",
+            description="Email welcome pack and self-serve activation steps.",
+            assigned_to="csm_owner",
+            due_offset_days=5,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Provision account",
+            description="Create tenant and apply defaults.",
+            assigned_to="implementation_owner",
+            due_offset_days=5,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Customer completes profile",
+            description="Customer fills out profile in portal.",
+            assigned_to="csm_owner",
+            due_offset_days=7,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            requires_setup_data=True,
+            task_type="customer",
+        ),
+    ],
+    duration_rules=DURATION_RULES,
+)
+
+COMPLIANCE_PLAYBOOK = PlaybookCreate(
+    name="Compliance/Regulated",
+    segment=CustomerType.ENTERPRISE,
+    supported_products=["enterprise", "core", "advanced"],
+    default_stages=STAGE_ORDER_STR,
+    default_tasks=[
+        TaskTemplate(
+            stage="kickoff",
+            title="Execute MSA and order form",
+            description="Legal and procurement sign-off; collect signed docs.",
+            assigned_to="implementation_owner",
+            due_offset_days=5,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            task_type="customer",
+        ),
+        TaskTemplate(
+            stage="kickoff",
+            title="Stakeholder kickoff and project charter",
+            description="Kickoff meeting; agree charter and timeline.",
+            assigned_to="implementation_owner",
+            due_offset_days=7,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="kickoff",
+            title="Technical and compliance discovery questionnaire",
+            description="Customer completes discovery (integrations, SSO, compliance requirements).",
+            assigned_to="implementation_owner",
+            due_offset_days=10,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            requires_setup_data=True,
+            task_type="customer",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Provision environment and SSO configuration",
+            description="Create tenant; configure SSO per discovery.",
+            assigned_to="implementation_owner",
+            due_offset_days=14,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Security and compliance review",
+            description="Share security docs; customer confirms compliance (e.g. HIPAA, SOC2, GDPR).",
+            assigned_to="implementation_owner",
+            due_offset_days=14,
+            required_for_stage_completion=True,
+            task_type="internal",
+        ),
+        TaskTemplate(
+            stage="setup",
+            title="Compliance documentation and sign-off",
+            description="Collect and file compliance attestations; customer sign-off.",
+            assigned_to="implementation_owner",
+            due_offset_days=14,
+            required_for_stage_completion=True,
+            is_customer_required=True,
+            task_type="customer",
+        ),
+    ],
+    duration_rules=DURATION_RULES,
+)
+
+PLAYBOOKS = [
+    SMB_PLAYBOOK,
+    MID_MARKET_PLAYBOOK,
+    ENTERPRISE_PLAYBOOK,
+    CRM_DEAL_PLAYBOOK,
+    COMPLIANCE_PLAYBOOK,
+]
 
 
 def main() -> None:
@@ -161,11 +343,11 @@ def main() -> None:
         for payload in PLAYBOOKS:
             existing = (
                 db.query(OnboardingPlaybook)
-                .filter(OnboardingPlaybook.segment == payload.segment)
+                .filter(OnboardingPlaybook.name == payload.name)
                 .first()
             )
             if existing:
-                print(f"Playbook for segment {payload.segment.value} already exists: {existing.name} (id={existing.id})")
+                print(f"Playbook already exists: {existing.name} (id={existing.id})")
                 continue
             playbook = create_playbook_from_payload(db, payload)
             print(f"Created playbook: {playbook.name} (segment={playbook.segment.value}, id={playbook.id})")

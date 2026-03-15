@@ -1,11 +1,13 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FolderKanban, Zap, AlertTriangle, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, FolderKanban, Zap, AlertTriangle, BookOpen, FileDown, FlaskConical } from 'lucide-react';
 
 const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
   { to: '/at-risk', icon: AlertTriangle, label: 'At-Risk' },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
+  { to: '/deals/import', icon: FileDown, label: 'Import deal' },
   { to: '/playbooks', icon: BookOpen, label: 'Playbooks' },
+  { to: '/simulator', icon: FlaskConical, label: 'Simulator' },
   { to: '/customers', icon: Users, label: 'Customers' },
 ];
 

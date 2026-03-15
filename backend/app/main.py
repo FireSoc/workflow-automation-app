@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import accounts, crm, customer_portal, customers, playbooks, projects, tasks
+from app.api.routes import accounts, crm, customer_portal, customers, playbooks, projects, simulations, tasks
 from app.core.config import settings
 from app.db.session import init_db
 
@@ -45,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(customers.router)
     app.include_router(playbooks.router)
     app.include_router(projects.router)
+    app.include_router(simulations.router)
     app.include_router(tasks.router)
 
     return app

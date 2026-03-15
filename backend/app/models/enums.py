@@ -3,6 +3,7 @@ import enum
 
 class CustomerType(str, enum.Enum):
     SMB = "smb"
+    MID_MARKET = "mid_market"
     ENTERPRISE = "enterprise"
 
 

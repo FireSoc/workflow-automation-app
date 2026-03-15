@@ -29,7 +29,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
   function validate(): boolean {
     const next: typeof errors = {};
     if (!form.company_name.trim()) next.company_name = 'Company name is required.';
-    if (!form.industry.trim()) next.industry = 'Industry is required.';
+    if (!(form.industry ?? '').trim()) next.industry = 'Industry is required.';
     setErrors(next);
     return Object.keys(next).length === 0;
   }
@@ -73,6 +73,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
           onChange={(e) => setForm((f) => ({ ...f, customer_type: e.target.value as CustomerType }))}
         >
           <option value="smb">SMB</option>
+          <option value="mid_market">Mid-Market</option>
           <option value="enterprise">Enterprise</option>
         </select>
       </div>
@@ -85,7 +86,7 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
           id="industry"
           className="input"
           placeholder="SaaS, FinTech, Healthcare…"
-          value={form.industry}
+          value={form.industry ?? ''}
           onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))}
           aria-invalid={!!errors.industry}
           aria-describedby={errors.industry ? 'industry-error' : undefined}

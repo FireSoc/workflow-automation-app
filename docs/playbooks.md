@@ -4,10 +4,28 @@ Playbooks are segment-scoped onboarding blueprints. They define **default stages
 
 ## Purpose
 
-- **Segment:** Each playbook targets one customer segment (`smb` or `enterprise`). Deal ingestion selects a playbook by segment and product overlap.
+- **Segment:** Each playbook is associated with one customer segment (`smb`, `mid_market`, or `enterprise`). Multiple playbooks can exist per segment (e.g. "SMB Standard" and "CRM Deal" both use segment `smb`). Deal ingestion and manual project creation select a playbook by **deterministic hard rules** (see below).
 - **Stages:** Ordered list of onboarding stages (kickoff → setup → integration → training → go_live). Must match `OnboardingStage` values.
 - **Task templates:** For each stage, the playbook defines a list of task templates. When a project enters a stage, the system creates concrete `Task` rows from these templates (with assignees and due dates resolved from the deal or project).
 - **Duration rules:** Optional map of stage → expected days. Used for due-date defaults and for stage-slippage detection (e.g. "stage exceeded expected duration").
+
+## Playbook selection (deterministic rules)
+
+Selection is implemented in `backend/app/services/playbook_selection_service.py`. Rules use `segment`, `products_purchased`, `special_requirements`, and `crm_source`. **Rule order** (first match wins):
+
+1. **Mid-market segment** → playbook **"Mid-Market Standard"**.
+2. **CRM signal** (e.g. `crm_source` contains "Salesforce", "HubSpot", "Manual", or product/requirement keywords like "crm") → **"CRM Deal"** (cross-segment).
+3. **Compliance signal** (`special_requirements` contains e.g. "compliance", "HIPAA", "SOC2", "GDPR", "regulated") → **"Compliance/Regulated"** (cross-segment).
+4. **Segment default** → **"SMB Standard"** (smb), **"Mid-Market Standard"** (mid_market), **"Enterprise Standard"** (enterprise).
+
+If the target playbook is missing in the DB, the service falls back to the segment default by name, then to a fixed ordered list of playbook names. Manual project creation uses the same selector with segment only (no deal payload), so it always resolves to the segment default playbook.
+
+**Example routing:**
+
+- Deal with `segment=smb`, `crm_source=Salesforce` → **CRM Deal**.
+- Deal with `segment=enterprise`, `special_requirements=HIPAA compliance` → **Compliance/Regulated**.
+- Deal with `segment=mid_market`, no special requirements → **Mid-Market Standard**.
+- Deal with `segment=enterprise`, no CRM/compliance signals → **Enterprise Standard**.
 
 ## Strict schema
 
@@ -48,7 +66,7 @@ All playbook creation goes through the **PlaybookCreate** Pydantic model and its
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `name` | string | Yes | Display name (e.g. "SMB Standard"). |
-| `segment` | `CustomerType` | Yes | `smb` or `enterprise`. |
+| `segment` | `CustomerType` | Yes | `smb`, `mid_market`, or `enterprise`. |
 | `supported_products` | list[string] | No (default []) | Products this playbook supports; used for matching on deal ingest. |
 | `default_stages` | list[str] | Yes | Ordered list of stage IDs (validated). |
 | `default_tasks` | list[TaskTemplate] | Yes | Task templates for one or more stages. |
@@ -89,9 +107,9 @@ All playbook creation goes through the **PlaybookCreate** Pydantic model and its
    ```bash
    cd backend && python scripts/seed_playbooks.py
    ```
-   This ensures one playbook per segment (SMB, Enterprise) exists; it skips creation if a playbook for that segment is already present.
+   Idempotent by **playbook name**: each named playbook is created only if it does not already exist. Multiple playbooks per segment are allowed (e.g. "SMB Standard" and "CRM Deal" for segment `smb`). Seeded playbooks: **SMB Standard**, **Mid-Market Standard**, **Enterprise Standard**, **CRM Deal**, **Compliance/Regulated**.
 
-2. To add another segment or variant later: extend the `PLAYBOOKS` list in `backend/scripts/seed_playbooks.py` with another `PlaybookCreate` payload (and add a new `CustomerType` enum value if the segment is new). No API or frontend change is required.
+2. To add another playbook: extend the `PLAYBOOKS` list in `backend/scripts/seed_playbooks.py` with another `PlaybookCreate` payload. If the playbook is selected by rules, update `playbook_selection_service.py` (e.g. add a new target name and rule). Add a new `CustomerType` enum value only if introducing a new segment.
 
 ## AI-ready design
 

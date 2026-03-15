@@ -86,7 +86,11 @@ def ingest_closed_won_deal(
     db.flush()
 
     playbook = select_playbook(
-        db, segment, products_purchased=products, special_requirements=special_requirements
+        db,
+        segment,
+        products_purchased=products,
+        special_requirements=special_requirements,
+        crm_source=crm_source,
     )
 
     project = OnboardingProject(

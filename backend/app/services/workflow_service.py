@@ -17,17 +17,14 @@ from app.models.onboarding_playbook import OnboardingPlaybook
 from app.models.onboarding_project import OnboardingProject
 from app.models.task import Task
 from app.services.event_service import log_event
+from app.services.playbook_selection_service import select_playbook
 
 
 def _get_playbook_for_segment(
     db: Session, customer_type: CustomerType
 ) -> OnboardingPlaybook | None:
-    """Return first playbook matching segment (customer type)."""
-    return (
-        db.query(OnboardingPlaybook)
-        .filter(OnboardingPlaybook.segment == customer_type)
-        .first()
-    )
+    """Return playbook for segment using same deterministic rules as deal ingest (segment default)."""
+    return select_playbook(db, customer_type)
 
 
 def _generate_tasks_for_stage(
@@ -70,8 +67,11 @@ def create_project(
     2. Generate kickoff tasks from the matching workflow template.
     3. Log project_created and tasks_generated events.
     """
+    playbook = select_playbook(db, customer.customer_type)
     project = OnboardingProject(
         customer_id=customer.id,
+        source_deal_id=None,
+        playbook_id=playbook.id if playbook else None,
         name=name,
         current_stage=OnboardingStage.KICKOFF,
         status=ProjectStatus.ACTIVE,
@@ -82,7 +82,7 @@ def create_project(
     db.flush()  # assign project.id before creating tasks/events
 
     tasks = _generate_tasks_for_stage(
-        db, project, customer.customer_type, OnboardingStage.KICKOFF, playbook=None
+        db, project, customer.customer_type, OnboardingStage.KICKOFF, playbook=playbook
     )
 
     log_event(

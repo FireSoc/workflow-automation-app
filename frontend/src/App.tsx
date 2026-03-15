@@ -9,6 +9,8 @@ import { ProjectDetail } from './pages/ProjectDetail';
 import { AtRiskAccounts } from './pages/AtRiskAccounts';
 import { PlaybookInspector } from './pages/PlaybookInspector';
 import { CustomerPortalProject } from './pages/CustomerPortalProject';
+import { ImportDeal } from './pages/ImportDeal';
+import { Simulator } from './pages/Simulator';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +35,8 @@ export default function App() {
             <Route path="/projects/list" element={<Projects />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
             <Route path="/playbooks" element={<PlaybookInspector />} />
+            <Route path="/simulator" element={<Simulator />} />
+            <Route path="/deals/import" element={<ImportDeal />} />
             <Route path="/portal/projects/:id" element={<CustomerPortalProject />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Route>

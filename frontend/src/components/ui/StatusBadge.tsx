@@ -53,13 +53,15 @@ export function TaskStatusBadge({ status }: { status: TaskStatus }) {
   return <Badge label={label} variant={variant} dot />;
 }
 
+const CUSTOMER_TYPE_BADGE: Record<CustomerType, { label: string; variant: BadgeVariant }> = {
+  smb: { label: 'SMB', variant: 'indigo' },
+  mid_market: { label: 'Mid-Market', variant: 'purple' },
+  enterprise: { label: 'Enterprise', variant: 'purple' },
+};
+
 export function CustomerTypeBadge({ type }: { type: CustomerType }) {
-  return (
-    <Badge
-      label={type === 'enterprise' ? 'Enterprise' : 'SMB'}
-      variant={type === 'enterprise' ? 'purple' : 'indigo'}
-    />
-  );
+  const config = CUSTOMER_TYPE_BADGE[type] ?? { label: type, variant: 'slate' as BadgeVariant };
+  return <Badge label={config.label} variant={config.variant} />;
 }
 
 const STAGE_BADGE_MAP: Record<OnboardingStage, { label: string; variant: BadgeVariant }> = {
