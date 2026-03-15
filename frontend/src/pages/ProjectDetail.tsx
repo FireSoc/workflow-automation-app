@@ -13,6 +13,9 @@ import {
   FileText,
   Building2,
   Activity,
+  Target,
+  Lightbulb,
+  ArrowRightCircle,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { tasksApi } from '../api/tasks';
@@ -203,6 +206,31 @@ export function ProjectDetail() {
     },
   });
 
+  const recalculateRiskMutation = useMutation({
+    mutationFn: () => projectsApi.recalculateRisk(projectId),
+    onSuccess: () => invalidate(),
+  });
+
+  const advanceStageMutation = useMutation({
+    mutationFn: () => projectsApi.advanceStage(projectId),
+    onSuccess: (data) => {
+      invalidate();
+      showMsg(data.message);
+    },
+  });
+
+  const { data: risk } = useQuery({
+    queryKey: ['project-risk', projectId],
+    queryFn: () => projectsApi.getRisk(projectId),
+    enabled: !!project && !isNaN(projectId),
+  });
+
+  const { data: summary } = useQuery({
+    queryKey: ['project-summary', projectId],
+    queryFn: () => projectsApi.getSummary(projectId),
+    enabled: !!project && !isNaN(projectId),
+  });
+
   if (isPending) return <PageLoading />;
 
   if (isError || !project) {
@@ -218,6 +246,9 @@ export function ProjectDetail() {
 
   const tasks = project.tasks ?? [];
   const events = project.events ?? [];
+  const riskSignals = project.risk_signals ?? [];
+  const recommendations = project.recommendations ?? [];
+  const blockedTasks = tasks.filter((t) => t.blocker_flag);
 
   const tasksByStage = tasks.reduce<Record<string, Task[]>>((acc, task) => {
     if (!acc[task.stage]) acc[task.stage] = [];
@@ -343,6 +374,18 @@ export function ProjectDetail() {
                     <span>{customer.industry}</span>
                   </div>
                 )}
+                {(project.target_go_live_date || project.projected_go_live_date) && (
+                  <div className="flex items-center gap-1.5">
+                    <Target className="h-4 w-4 text-slate-400" />
+                    <span>
+                      Go-live: {project.projected_go_live_date
+                        ? new Date(project.projected_go_live_date).toLocaleDateString('en-US')
+                        : project.target_go_live_date
+                          ? new Date(project.target_go_live_date).toLocaleDateString('en-US')
+                          : '—'}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1.5">
                   <Clock className="h-4 w-4 text-slate-400" />
                   <span>
@@ -362,6 +405,90 @@ export function ProjectDetail() {
                 )}
               </div>
             </section>
+
+            {/* Risk explanation */}
+            {(project.risk_flag || (risk && risk.explanations?.length)) && (
+              <section className="card p-5 border-red-100 bg-red-50/30" aria-labelledby="risk-heading">
+                <h2 id="risk-heading" className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
+                  <ShieldAlert className="h-4 w-4 text-red-500" />
+                  Risk {risk?.risk_level && `(${risk.risk_level})`}
+                </h2>
+                <ul className="text-sm text-slate-700 list-disc list-inside space-y-0.5">
+                  {(risk?.explanations ?? riskSignals.map((s) => s.description)).map((text, i) => (
+                    <li key={i}>{text}</li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Blockers */}
+            {blockedTasks.length > 0 && (
+              <section className="card p-5 border-amber-200 bg-amber-50/30" aria-labelledby="blockers-heading">
+                <h2 id="blockers-heading" className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  Blockers
+                </h2>
+                <ul className="text-sm text-slate-700 space-y-1">
+                  {blockedTasks.map((t) => (
+                    <li key={t.id}>
+                      <span className="font-medium">{t.title}</span>
+                      {t.blocker_reason && ` — ${t.blocker_reason}`}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {/* Next best action & recommendations */}
+            {(project.next_best_action || recommendations.length > 0) && (
+              <section className="card p-5" aria-labelledby="next-heading">
+                <h2 id="next-heading" className="text-sm font-semibold text-slate-800 flex items-center gap-2 mb-2">
+                  <Lightbulb className="h-4 w-4 text-brand-600" />
+                  Next best action
+                </h2>
+                {project.next_best_action && (
+                  <p className="text-sm text-slate-700">{project.next_best_action}</p>
+                )}
+                {recommendations.length > 0 && (
+                  <ul className="mt-2 text-sm text-slate-600 space-y-1">
+                    {recommendations.map((r) => (
+                      <li key={r.id}>{r.label ?? r.action_type}</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            )}
+
+            {/* Summary */}
+            {summary && (
+              <section className="card p-5" aria-labelledby="summary-heading">
+                <h2 id="summary-heading" className="text-sm font-semibold text-slate-800 mb-3">
+                  Summary
+                </h2>
+                <dl className="text-sm space-y-2">
+                  <div>
+                    <dt className="text-slate-500">Complete</dt>
+                    <dd className="text-slate-800">{summary.what_is_complete}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Blocked</dt>
+                    <dd className="text-slate-800">{summary.what_is_blocked}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Risk</dt>
+                    <dd className="text-slate-800">{summary.why_risk_elevated}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Next</dt>
+                    <dd className="text-slate-800">{summary.what_happens_next}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-slate-500">Go-live</dt>
+                    <dd className="text-slate-800">{summary.go_live_realistic}</dd>
+                  </div>
+                </dl>
+              </section>
+            )}
 
             {/* Task actions bar */}
             <div className="flex items-center gap-2 flex-wrap">
@@ -401,6 +528,34 @@ export function ProjectDetail() {
                 )}
                 Check Risk
               </button>
+              <button
+                type="button"
+                className="btn-secondary text-sm"
+                onClick={() => recalculateRiskMutation.mutate()}
+                disabled={recalculateRiskMutation.isPending}
+              >
+                {recalculateRiskMutation.isPending ? (
+                  <LoadingSpinner size="sm" />
+                ) : (
+                  <ShieldAlert className="h-4 w-4" />
+                )}
+                Recalculate Risk
+              </button>
+              {project.status !== 'completed' && (
+                <button
+                  type="button"
+                  className="btn text-sm bg-brand-600 text-white hover:bg-brand-700"
+                  onClick={() => advanceStageMutation.mutate()}
+                  disabled={advanceStageMutation.isPending}
+                >
+                  {advanceStageMutation.isPending ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <ArrowRightCircle className="h-4 w-4" />
+                  )}
+                  Advance Stage
+                </button>
+              )}
             </div>
 
             {/* Tasks table */}
@@ -460,7 +615,7 @@ export function ProjectDetail() {
               <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
                 <Activity className="h-4 w-4 text-slate-400" />
                 <h3 id="events-heading" className="text-sm font-semibold text-slate-800">
-                  Workflow Events
+                  Activity
                 </h3>
                 <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
                   {events.length}

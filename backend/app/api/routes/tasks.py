@@ -19,7 +19,9 @@ def mark_task_complete(task_id: int, db: Session = Depends(get_db)) -> TaskCompl
         .first()
     )
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found."
+        )
 
     from app.models.enums import TaskStatus
 

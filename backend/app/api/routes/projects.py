@@ -4,18 +4,23 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import get_db
 from app.models.customer import Customer
 from app.models.onboarding_project import OnboardingProject
+from app.models.recommendation import Recommendation
 from app.schemas.project import (
     OverdueCheckResponse,
     ProjectCreate,
     ProjectDetail,
     ProjectRead,
+    ProjectSummaryResponse,
     RiskCheckResponse,
+    RiskRead,
 )
 from app.schemas.task import TaskRead
-from app.schemas.workflow_event import WorkflowEventRead
+from app.schemas.onboarding_event import OnboardingEventRead
+from app.schemas.recommendation import RecommendationRead
 from app.services.reminder_service import check_overdue_tasks
-from app.services.risk_service import apply_risk_check
-from app.services.workflow_service import create_project
+from app.services.risk_service import apply_risk_check, recalculate_risk
+from app.services.summary_service import build_summary
+from app.services.workflow_service import advance_stage, create_project
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -27,6 +32,8 @@ def _get_project_or_404(db: Session, project_id: int) -> OnboardingProject:
             selectinload(OnboardingProject.tasks),
             selectinload(OnboardingProject.events),
             selectinload(OnboardingProject.customer),
+            selectinload(OnboardingProject.risk_signals),
+            selectinload(OnboardingProject.recommendations),
         )
         .filter(OnboardingProject.id == project_id)
         .first()
@@ -69,10 +76,35 @@ def list_project_tasks(project_id: int, db: Session = Depends(get_db)):
     return project.tasks
 
 
-@router.get("/{project_id}/events", response_model=list[WorkflowEventRead])
+@router.get("/{project_id}/events", response_model=list[OnboardingEventRead])
 def list_project_events(project_id: int, db: Session = Depends(get_db)):
     project = _get_project_or_404(db, project_id)
     return sorted(project.events, key=lambda e: e.created_at)
+
+
+@router.get("/{project_id}/recommendations", response_model=list[RecommendationRead])
+def list_project_recommendations(project_id: int, db: Session = Depends(get_db)):
+    project = _get_project_or_404(db, project_id)
+    return [r for r in project.recommendations if not r.dismissed]
+
+
+@router.post("/{project_id}/recommendations/{recommendation_id}/dismiss", response_model=RecommendationRead)
+def dismiss_recommendation(
+    project_id: int, recommendation_id: int, db: Session = Depends(get_db)
+):
+    project = _get_project_or_404(db, project_id)
+    rec = db.query(Recommendation).filter(
+        Recommendation.id == recommendation_id,
+        Recommendation.project_id == project_id,
+    ).first()
+    if not rec:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found."
+        )
+    rec.dismissed = True
+    db.commit()
+    db.refresh(rec)
+    return rec
 
 
 @router.post("/{project_id}/check-overdue", response_model=OverdueCheckResponse)
@@ -89,6 +121,58 @@ def check_overdue(project_id: int, db: Session = Depends(get_db)) -> OverdueChec
             else "No overdue tasks found."
         ),
     )
+
+
+@router.get("/{project_id}/risk", response_model=RiskRead)
+def get_project_risk(project_id: int, db: Session = Depends(get_db)) -> RiskRead:
+    project = _get_project_or_404(db, project_id)
+    from app.services.risk_scoring_service import compute_risk
+
+    score, level, explanations = compute_risk(db, project)
+    return RiskRead(
+        risk_score=score,
+        risk_level=level,
+        risk_flag=project.risk_flag,
+        explanations=explanations,
+    )
+
+
+@router.post("/{project_id}/risk/recalculate", response_model=RiskRead)
+def recalculate_project_risk(project_id: int, db: Session = Depends(get_db)) -> RiskRead:
+    project = _get_project_or_404(db, project_id)
+    score, level, explanations = recalculate_risk(db, project)
+    return RiskRead(
+        risk_score=score,
+        risk_level=level,
+        risk_flag=project.risk_flag,
+        explanations=explanations,
+    )
+
+
+@router.get("/{project_id}/summary", response_model=ProjectSummaryResponse)
+def get_project_summary(project_id: int, db: Session = Depends(get_db)) -> ProjectSummaryResponse:
+    project = _get_project_or_404(db, project_id)
+    return build_summary(project)
+
+
+@router.post("/{project_id}/advance-stage", response_model=dict)
+def advance_project_stage(project_id: int, db: Session = Depends(get_db)) -> dict:
+    project = _get_project_or_404(db, project_id)
+    customer = project.customer
+    if not customer:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
+    advanced, new_stage, project_completed = advance_stage(db, project, customer.customer_type)
+    return {
+        "advanced": advanced,
+        "new_stage": new_stage.value if new_stage else None,
+        "project_completed": project_completed,
+        "message": (
+            "Project completed."
+            if project_completed
+            else f"Advanced to {new_stage.value}." if advanced
+            else "Stage gate not met; cannot advance.",
+        ),
+    }
 
 
 @router.post("/{project_id}/check-risk", response_model=RiskCheckResponse)

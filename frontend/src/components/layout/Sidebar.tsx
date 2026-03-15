@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, FolderKanban, Zap } from 'lucide-react';
+import { LayoutDashboard, Users, FolderKanban, Zap, AlertTriangle, BookOpen } from 'lucide-react';
 
 const NAV_ITEMS = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/customers', icon: Users, label: 'Customers' },
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Overview' },
+  { to: '/at-risk', icon: AlertTriangle, label: 'At-Risk' },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
+  { to: '/playbooks', icon: BookOpen, label: 'Playbooks' },
+  { to: '/customers', icon: Users, label: 'Customers' },
 ];
 
 export function Sidebar() {

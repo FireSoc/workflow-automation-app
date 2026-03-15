@@ -14,6 +14,7 @@ def create_customer(payload: CustomerCreate, db: Session = Depends(get_db)) -> C
         company_name=payload.company_name,
         customer_type=payload.customer_type,
         industry=payload.industry,
+        primary_contacts=payload.primary_contacts,
     )
     db.add(customer)
     db.commit()

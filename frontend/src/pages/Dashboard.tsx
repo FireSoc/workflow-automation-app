@@ -127,7 +127,8 @@ export function Dashboard() {
                             {project.name ?? customer?.company_name ?? `Project #${project.id}`}
                           </p>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            {customer?.customer_type.toUpperCase()} · {customer?.industry}
+                            {customer?.customer_type.toUpperCase()}
+                            {customer?.industry ? ` · ${customer.industry}` : ''}
                           </p>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
@@ -185,10 +186,10 @@ export function Dashboard() {
                       </p>
                     </div>
                     <Link
-                      to="/projects"
+                      to="/at-risk"
                       className="mt-1 text-xs text-red-600 hover:underline flex items-center gap-1"
                     >
-                      Review now <ArrowRight className="h-3 w-3" />
+                      Review at-risk accounts <ArrowRight className="h-3 w-3" />
                     </Link>
                   </div>
                 )}

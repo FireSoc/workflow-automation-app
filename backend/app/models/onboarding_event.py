@@ -7,8 +7,10 @@ from app.db.base import Base
 from app.models.enums import EventType
 
 
-class WorkflowEvent(Base):
-    __tablename__ = "workflow_events"
+class OnboardingEvent(Base):
+    """Structured audit trail / event feed for onboarding projects."""
+
+    __tablename__ = "onboarding_events"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     project_id: Mapped[int] = mapped_column(

@@ -1,6 +1,5 @@
-"""Workflow orchestration: template selection, task generation, stage progression."""
+"""Onboarding project orchestration: playbook selection, task generation, stage progression."""
 
-import json
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.orm import Session
@@ -14,21 +13,19 @@ from app.models.enums import (
     STAGE_ORDER,
     TaskStatus,
 )
+from app.models.onboarding_playbook import OnboardingPlaybook
 from app.models.onboarding_project import OnboardingProject
 from app.models.task import Task
-from app.models.workflow_template import WorkflowTemplate
 from app.services.event_service import log_event
 
 
-def _get_template(
-    db: Session, customer_type: CustomerType, stage: OnboardingStage
-) -> WorkflowTemplate | None:
+def _get_playbook_for_segment(
+    db: Session, customer_type: CustomerType
+) -> OnboardingPlaybook | None:
+    """Return first playbook matching segment (customer type)."""
     return (
-        db.query(WorkflowTemplate)
-        .filter(
-            WorkflowTemplate.customer_type == customer_type,
-            WorkflowTemplate.stage_name == stage,
-        )
+        db.query(OnboardingPlaybook)
+        .filter(OnboardingPlaybook.segment == customer_type)
         .first()
     )
 
@@ -38,34 +35,30 @@ def _generate_tasks_for_stage(
     project: OnboardingProject,
     customer_type: CustomerType,
     stage: OnboardingStage,
+    playbook: OnboardingPlaybook | None = None,
+    implementation_owner: str | None = None,
+    csm_owner: str | None = None,
+    kickoff_date: datetime | None = None,
+    target_go_live_date: datetime | None = None,
 ) -> list[Task]:
-    """Create Task rows from a WorkflowTemplate for the given stage."""
-    template = _get_template(db, customer_type, stage)
-    if not template:
+    """Create Task rows from playbook (owner/deadline resolved when provided)."""
+    from app.services.project_generation_service import generate_tasks_for_stage as gen_tasks
+
+    if playbook is None:
+        playbook = _get_playbook_for_segment(db, customer_type)
+    if not playbook:
         return []
 
-    task_defs: list[dict] = json.loads(template.template_json)
-    now = datetime.now(timezone.utc)
-    created_tasks: list[Task] = []
-
-    for td in task_defs:
-        due_offset = td.get("due_offset_days", 7)
-        task = Task(
-            project_id=project.id,
-            stage=stage,
-            title=td["title"],
-            description=td.get("description"),
-            assigned_to=td.get("assigned_to"),
-            status=TaskStatus.NOT_STARTED,
-            due_date=now + timedelta(days=due_offset),
-            required_for_stage_completion=td.get("required_for_stage_completion", True),
-            is_customer_required=td.get("is_customer_required", False),
-            requires_setup_data=td.get("requires_setup_data", False),
-        )
-        db.add(task)
-        created_tasks.append(task)
-
-    return created_tasks
+    return gen_tasks(
+        db,
+        project,
+        playbook,
+        stage,
+        implementation_owner=implementation_owner,
+        csm_owner=csm_owner,
+        kickoff_date=kickoff_date or project.kickoff_date,
+        target_go_live_date=target_go_live_date or project.target_go_live_date,
+    )
 
 
 def create_project(
@@ -89,7 +82,7 @@ def create_project(
     db.flush()  # assign project.id before creating tasks/events
 
     tasks = _generate_tasks_for_stage(
-        db, project, customer.customer_type, OnboardingStage.KICKOFF
+        db, project, customer.customer_type, OnboardingStage.KICKOFF, playbook=None
     )
 
     log_event(
@@ -205,7 +198,12 @@ def advance_stage(
     project.risk_flag = False
     db.flush()
 
-    tasks = _generate_tasks_for_stage(db, project, customer_type, next_stage)
+    playbook = getattr(project, "playbook", None) or _get_playbook_for_segment(
+        db, customer_type
+    )
+    tasks = _generate_tasks_for_stage(
+        db, project, customer_type, next_stage, playbook=playbook
+    )
 
     log_event(
         db,

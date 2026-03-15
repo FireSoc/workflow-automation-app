@@ -1,9 +1,9 @@
-"""Central event logging utility used by every other service."""
+"""Central event logging for onboarding project audit trail."""
 
 from sqlalchemy.orm import Session
 
 from app.models.enums import EventType
-from app.models.workflow_event import WorkflowEvent
+from app.models.onboarding_event import OnboardingEvent
 
 
 def log_event(
@@ -13,13 +13,9 @@ def log_event(
     event_type: EventType,
     message: str,
     task_id: int | None = None,
-) -> WorkflowEvent:
-    """Persist a WorkflowEvent and return it.
-
-    Callers are responsible for calling db.commit() after their full
-    unit of work is complete so that all writes happen atomically.
-    """
-    event = WorkflowEvent(
+) -> OnboardingEvent:
+    """Persist an OnboardingEvent. Callers must db.commit() after their unit of work."""
+    event = OnboardingEvent(
         project_id=project_id,
         task_id=task_id,
         event_type=event_type,

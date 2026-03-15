@@ -6,13 +6,13 @@
 
 @layer base {
   html {
-    @apply h-full;
+    @apply h-full min-h-screen;
   }
   body {
-    @apply h-full bg-slate-50 text-slate-900 antialiased;
+    @apply min-h-screen h-full bg-slate-50 text-slate-900 antialiased;
   }
   #root {
-    @apply h-full;
+    @apply min-h-screen h-full;
   }
 }
 

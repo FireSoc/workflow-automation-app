@@ -62,13 +62,18 @@ export function CustomerTypeBadge({ type }: { type: CustomerType }) {
   );
 }
 
+const STAGE_BADGE_MAP: Record<OnboardingStage, { label: string; variant: BadgeVariant }> = {
+  kickoff: { label: 'Kickoff', variant: 'indigo' },
+  setup: { label: 'Setup', variant: 'blue' },
+  integration: { label: 'Integration', variant: 'purple' },
+  training: { label: 'Training', variant: 'purple' },
+  go_live: { label: 'Go-Live', variant: 'green' },
+};
+
+const UNKNOWN_STAGE_FALLBACK = { label: 'Unknown', variant: 'slate' as BadgeVariant };
+
 export function StageBadge({ stage }: { stage: OnboardingStage }) {
-  const map: Record<OnboardingStage, { label: string; variant: BadgeVariant }> = {
-    kickoff: { label: 'Kickoff', variant: 'indigo' },
-    setup: { label: 'Setup', variant: 'blue' },
-    training: { label: 'Training', variant: 'purple' },
-    go_live: { label: 'Go-Live', variant: 'green' },
-  };
-  const { label, variant } = map[stage];
+  const config = stage ? STAGE_BADGE_MAP[stage] ?? UNKNOWN_STAGE_FALLBACK : UNKNOWN_STAGE_FALLBACK;
+  const { label, variant } = config;
   return <Badge label={label} variant={variant} />;
 }

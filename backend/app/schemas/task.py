@@ -14,8 +14,15 @@ class TaskRead(BaseModel):
     title: str
     description: str | None
     assigned_to: str | None
+    owner_type: str | None
+    owner_id: str | None
     status: TaskStatus
     due_date: datetime | None
+    dependency_ids: list | None
+    blocker_flag: bool
+    blocker_reason: str | None
+    completed_at: datetime | None
+    task_type: str | None
     required_for_stage_completion: bool
     is_customer_required: bool
     requires_setup_data: bool

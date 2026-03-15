@@ -2,9 +2,11 @@ import { useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 const PAGE_TITLES: Record<string, string> = {
-  '/dashboard': 'Dashboard',
-  '/customers': 'Customers',
+  '/dashboard': 'Overview',
+  '/at-risk': 'At-Risk Accounts',
   '/projects': 'Projects',
+  '/playbooks': 'Playbooks',
+  '/customers': 'Customers',
 };
 
 interface TopbarProps {
@@ -16,7 +18,7 @@ export function Topbar({ action }: TopbarProps) {
 
   const title =
     PAGE_TITLES[pathname] ??
-    (pathname.startsWith('/projects/') ? 'Projects' : 'Agile');
+    (pathname.startsWith('/portal/') ? 'Customer portal' : pathname.startsWith('/projects/') ? 'Project' : 'Agile');
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-slate-200 bg-white px-6">

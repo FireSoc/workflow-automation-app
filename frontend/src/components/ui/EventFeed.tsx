@@ -9,19 +9,25 @@ import {
   Trophy,
   Ban,
 } from 'lucide-react';
-import type { WorkflowEvent, EventType } from '../../types';
+import type { OnboardingEvent, EventType } from '../../types';
 import { EmptyState } from './EmptyState';
 
-const EVENT_META: Record<EventType, { icon: React.ElementType; color: string; label: string }> = {
+const EVENT_META: Partial<Record<EventType, { icon: React.ElementType; color: string; label: string }>> = {
+  deal_ingested: { icon: FolderOpen, color: 'text-blue-500 bg-blue-50', label: 'Deal Ingested' },
   project_created: { icon: FolderOpen, color: 'text-blue-500 bg-blue-50', label: 'Project Created' },
+  playbook_selected: { icon: ListTodo, color: 'text-indigo-500 bg-indigo-50', label: 'Playbook Selected' },
   tasks_generated: { icon: ListTodo, color: 'text-indigo-500 bg-indigo-50', label: 'Tasks Generated' },
   task_completed: { icon: CheckCircle2, color: 'text-emerald-500 bg-emerald-50', label: 'Task Completed' },
   project_advanced: { icon: TrendingUp, color: 'text-brand-500 bg-brand-50', label: 'Stage Advanced' },
   reminder_triggered: { icon: Bell, color: 'text-amber-500 bg-amber-50', label: 'Reminder' },
   risk_flag_added: { icon: AlertTriangle, color: 'text-red-500 bg-red-50', label: 'Risk Flagged' },
   risk_flag_cleared: { icon: ShieldCheck, color: 'text-emerald-500 bg-emerald-50', label: 'Risk Cleared' },
+  risk_score_changed: { icon: AlertTriangle, color: 'text-red-500 bg-red-50', label: 'Risk Updated' },
   project_completed: { icon: Trophy, color: 'text-green-500 bg-green-50', label: 'Completed' },
   stage_blocked: { icon: Ban, color: 'text-orange-500 bg-orange-50', label: 'Stage Blocked' },
+  blocker_detected: { icon: Ban, color: 'text-orange-500 bg-orange-50', label: 'Blocker' },
+  stage_delayed: { icon: Bell, color: 'text-amber-500 bg-amber-50', label: 'Stage Delayed' },
+  escalation_triggered: { icon: AlertTriangle, color: 'text-red-500 bg-red-50', label: 'Escalation' },
 };
 
 function formatRelativeTime(dateStr: string) {
@@ -39,7 +45,7 @@ function formatRelativeTime(dateStr: string) {
 }
 
 interface EventFeedProps {
-  events: WorkflowEvent[];
+  events: OnboardingEvent[];
   maxItems?: number;
 }
 
@@ -47,11 +53,11 @@ export function EventFeed({ events, maxItems }: EventFeedProps) {
   const displayed = maxItems ? [...events].reverse().slice(0, maxItems) : [...events].reverse();
 
   if (displayed.length === 0) {
-    return <EmptyState title="No events yet" description="Workflow events will appear here as the project progresses." />;
+    return <EmptyState title="No activity yet" description="Project activity will appear here as the onboarding progresses." />;
   }
 
   return (
-    <ol className="space-y-0" aria-label="Workflow event feed">
+    <ol className="space-y-0" aria-label="Project activity">
       {displayed.map((event, idx) => {
         const meta = EVENT_META[event.event_type] ?? {
           icon: FolderOpen,
