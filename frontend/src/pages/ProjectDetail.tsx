@@ -255,7 +255,8 @@ export function ProjectDetail() {
         </Link>
       ),
     });
-  }, [setPageLayout, projectName, project]);
+    // Depend on id/name only so we don't re-run when project object reference changes
+  }, [setPageLayout, projectName, project?.id]);
 
   if (isPending) return <PageLoading />;
 

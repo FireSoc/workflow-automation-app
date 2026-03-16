@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, AlertTriangle, FolderKanban, ExternalLink } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, AlertTriangle, FolderKanban, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { customersApi } from '../api/customers';
 import { ProjectStatusBadge, StageBadge, CustomerTypeBadge } from '../components/ui/StatusBadge';
 import { ProjectForm } from '../components/ui/ProjectForm';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { FilterBar } from '@/components/ui/FilterBar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -29,10 +34,21 @@ import { cn } from '@/lib/utils';
 
 export function Projects() {
   const [isModalOpen, setModalOpen] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<{ id: number; label: string } | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
   const { setPageLayout } = usePageLayout();
+  const queryClient = useQueryClient();
   const companyId = searchParams.get('company');
   const projectId = searchParams.get('project');
+  const atRisk = searchParams.get('atRisk') === '1';
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: (id: number) => projectsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setProjectToDelete(null);
+    },
+  });
 
   const { data: projects, isPending: loadingProjects, isError, refetch } = useQuery({
     queryKey: ['projects'],
@@ -55,6 +71,10 @@ export function Projects() {
       ? filteredByCompany.filter((p) => p.id === Number(projectId))
       : filteredByCompany;
 
+  const displayedProjects = atRisk
+    ? (filteredProjects?.filter((p) => p.status === 'at_risk' || p.risk_flag) ?? [])
+    : (filteredProjects ?? []);
+
   const projectsForProjectDropdown = filteredByCompany ?? [];
 
   function setCompany(value: string) {
@@ -72,12 +92,21 @@ export function Projects() {
     setSearchParams(next);
   }
 
+  function setAtRisk(value: boolean) {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('atRisk', '1');
+    else next.delete('atRisk');
+    setSearchParams(next);
+  }
+
   const tableTitle =
     companyId && projectId
       ? 'Project'
       : companyId
         ? `Projects for ${customerMap.get(Number(companyId))?.company_name ?? 'Customer'}`
-        : 'All Projects';
+        : atRisk
+          ? 'At-risk projects'
+          : 'All Projects';
 
   useEffect(() => {
     setPageLayout({
@@ -94,17 +123,6 @@ export function Projects() {
 
   return (
     <PageContainer className="flex flex-col gap-6">
-      <PageHeader
-        title="Projects"
-        subtitle="Browse and filter onboarding projects. Open a project to run simulations and manage tasks."
-        action={
-          <Button size="sm" onClick={() => setModalOpen(true)} className="gap-1.5">
-            <Plus className="size-4" />
-            New project
-          </Button>
-        }
-      />
-
       {!loadingProjects && !isError && (projects?.length ?? 0) > 0 && (
         <FilterBar>
           <select
@@ -143,6 +161,16 @@ export function Projects() {
               );
             })}
           </select>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input
+              type="checkbox"
+              checked={atRisk}
+              onChange={(e) => setAtRisk(e.target.checked)}
+              aria-label="At risk only"
+              className="rounded border-input"
+            />
+            At risk only
+          </label>
         </FilterBar>
       )}
 
@@ -155,7 +183,7 @@ export function Projects() {
         />
       )}
 
-      {!loadingProjects && !isError && filteredProjects?.length === 0 && (
+      {!loadingProjects && !isError && (filteredProjects?.length ?? 0) === 0 && (
         <EmptyState
           title="No projects yet"
           description="Create a new onboarding project for a customer to get started."
@@ -175,10 +203,10 @@ export function Projects() {
             <CardTitle className="text-base flex items-center gap-2">
               {tableTitle}
               <Badge variant="secondary" className="font-normal">
-                {filteredProjects.length}
+                {displayedProjects.length}
               </Badge>
             </CardTitle>
-            {(companyId || projectId) && (
+            {(companyId || projectId || atRisk) && (
               <Button variant="link" size="sm" className="text-primary" onClick={() => setSearchParams({})}>
                 Clear filters
               </Button>
@@ -197,7 +225,14 @@ export function Projects() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProjects.map((project) => {
+                {displayedProjects.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
+                      No at-risk projects. Clear the filter or check back later.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                displayedProjects.map((project) => {
                   const customer = customerMap.get(project.customer_id);
                   return (
                     <TableRow key={project.id}>
@@ -236,13 +271,42 @@ export function Projects() {
                         })}
                       </TableCell>
                       <TableCell className="px-5 py-3.5 text-right">
-                        <Link to={`/projects/${project.id}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1">
-                          Open <ExternalLink className="h-3 w-3" />
-                        </Link>
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            to={`/projects/${project.id}`}
+                            className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1"
+                          >
+                            Open <ExternalLink className="h-3 w-3" />
+                          </Link>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label="Actions">
+                                  <MoreHorizontal className="size-4" />
+                                </Button>
+                              }
+                            />
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() =>
+                                  setProjectToDelete({
+                                    id: project.id,
+                                    label: `${customer?.company_name ?? `Customer #${project.customer_id}`} — #${project.id}`,
+                                  })
+                                }
+                              >
+                                <Trash2 className="size-4 mr-2" />
+                                Delete project
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
-                })}
+                })
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -259,6 +323,34 @@ export function Projects() {
             onSuccess={() => setModalOpen(false)}
             onCancel={() => setModalOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={projectToDelete != null} onOpenChange={(open) => !open && setProjectToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete project</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <strong>{projectToDelete?.label}</strong>? All tasks and events for this
+            project will be removed. This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setProjectToDelete(null)}
+              disabled={deleteProjectMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => projectToDelete && deleteProjectMutation.mutate(projectToDelete.id)}
+              disabled={deleteProjectMutation.isPending}
+            >
+              {deleteProjectMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageContainer>

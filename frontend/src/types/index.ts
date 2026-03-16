@@ -119,54 +119,6 @@ export interface Recommendation {
   created_at: string;
 }
 
-// ─── Ops Inbox (client-built or from GET /ops/inbox) ──────────────────────────
-
-export type OpsInboxItemType = 'blocked_task' | 'overdue_task' | 'recommendation' | 'project_alert';
-
-export interface OpsInboxProjectSummary {
-  id: number;
-  name: string | null;
-  current_stage: OnboardingStage;
-  status: ProjectStatus;
-  risk_flag: boolean;
-  risk_score: number | null;
-}
-
-export interface OpsInboxItemFromApi {
-  item_type: OpsInboxItemType;
-  priority_score: number;
-  project: OpsInboxProjectSummary;
-  customer: Customer | null;
-  task: Task | null;
-  recommendation: Recommendation | null;
-  created_at: string;
-}
-
-export interface OpsInboxTotals {
-  blocked: number;
-  overdue: number;
-  recommendations: number;
-  at_risk_project_alerts: number;
-  at_risk_projects: number;
-  needs_attention_now: number;
-}
-
-export interface OpsInboxResponse {
-  generated_at: string;
-  totals: OpsInboxTotals;
-  items: OpsInboxItemFromApi[];
-}
-
-export interface OpsInboxItem {
-  item_type: OpsInboxItemType;
-  priority_score: number;
-  project: Project | OpsInboxProjectSummary;
-  customer: Customer | undefined;
-  task?: Task;
-  recommendation?: Recommendation;
-  created_at: string;
-}
-
 export interface ProjectDetail extends Project {
   tasks: Task[];
   events: OnboardingEvent[];

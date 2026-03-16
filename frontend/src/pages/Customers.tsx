@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Plus, Building2, ArrowRight } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Plus, Building2, ArrowRight, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { customersApi } from '../api/customers';
 import { projectsApi } from '../api/projects';
 import { CustomerTypeBadge } from '../components/ui/StatusBadge';
 import { CustomerForm } from '../components/ui/CustomerForm';
 import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeader } from '@/components/layout/PageHeader';
 import { usePageLayout } from '@/contexts/PageLayoutContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
@@ -28,7 +33,18 @@ import { EmptyState } from '@/components/ui/EmptyState';
 
 export function Customers() {
   const [isModalOpen, setModalOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<{ id: number; company_name: string } | null>(null);
   const { setPageLayout } = usePageLayout();
+  const queryClient = useQueryClient();
+
+  const deleteCustomerMutation = useMutation({
+    mutationFn: (id: number) => customersApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      setCustomerToDelete(null);
+    },
+  });
 
   const { data: customers, isPending, isError, refetch } = useQuery({
     queryKey: ['customers'],
@@ -63,17 +79,6 @@ export function Customers() {
 
   return (
     <PageContainer className="flex flex-col gap-6">
-      <PageHeader
-        title="Customers"
-        subtitle="Manage customer accounts and link to onboarding projects."
-        action={
-          <Button size="sm" onClick={() => setModalOpen(true)} className="gap-1.5">
-            <Plus className="size-4" />
-            New customer
-          </Button>
-        }
-      />
-
       {isPending && <PageLoading />}
 
       {isError && (
@@ -143,18 +148,41 @@ export function Customers() {
                       })}
                     </TableCell>
                     <TableCell className="px-5 py-3.5 text-right">
-                      {(() => {
-                        const projectId = getMostRecentProjectIdForCustomer(customer.id);
-                        return projectId != null ? (
-                          <Link to={`/projects/${projectId}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1">
-                            View projects <ArrowRight className="h-3 w-3" />
-                          </Link>
-                        ) : (
-                          <Link to={`/projects/list?company=${customer.id}`} className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1">
-                            View projects <ArrowRight className="h-3 w-3" />
-                          </Link>
-                        );
-                      })()}
+                      <div className="flex items-center justify-end gap-1">
+                        {(() => {
+                          const projectId = getMostRecentProjectIdForCustomer(customer.id);
+                          const viewLink =
+                            projectId != null
+                              ? `/projects/${projectId}`
+                              : `/projects/list?company=${customer.id}`;
+                          return (
+                            <Link
+                              to={viewLink}
+                              className="text-sm font-medium text-primary underline-offset-4 hover:underline inline-flex items-center gap-1"
+                            >
+                              View projects <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          );
+                        })()}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button variant="ghost" size="icon" className="size-8 shrink-0" aria-label="Actions">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            }
+                          />
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setCustomerToDelete({ id: customer.id, company_name: customer.company_name })}
+                            >
+                              <Trash2 className="size-4 mr-2" />
+                              Delete customer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -173,6 +201,34 @@ export function Customers() {
             onSuccess={() => setModalOpen(false)}
             onCancel={() => setModalOpen(false)}
           />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={customerToDelete != null} onOpenChange={(open) => !open && setCustomerToDelete(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete customer</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <strong>{customerToDelete?.company_name}</strong>? This will also delete
+            all onboarding projects for this customer. This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCustomerToDelete(null)}
+              disabled={deleteCustomerMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => customerToDelete && deleteCustomerMutation.mutate(customerToDelete.id)}
+              disabled={deleteCustomerMutation.isPending}
+            >
+              {deleteCustomerMutation.isPending ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageContainer>

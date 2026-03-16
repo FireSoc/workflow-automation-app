@@ -30,4 +30,5 @@ export const projectsApi = {
   recommendations: (id: number) => api.get<Recommendation[]>(`/projects/${id}/recommendations`),
   dismissRecommendation: (projectId: number, recommendationId: number) =>
     api.post<Recommendation>(`/projects/${projectId}/recommendations/${recommendationId}/dismiss`),
+  delete: (id: number) => api.delete(`/projects/${id}`),
 };

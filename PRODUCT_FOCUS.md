@@ -10,7 +10,7 @@ When adding new features or components, align with this document (see **Referenc
 
 - **Buyer:** Companies that run customer onboarding (e.g. CS / onboarding / implementation teams).
 - **Their job:** Turn won deals into structured onboarding projects, move customers through stages, and avoid stalls and missed go-lives.
-- **This product:** Gives them playbook-driven projects, risk and recommendations, (future) an ops inbox, and AI assistance. Deal ingestion connects their CRM so projects are created automatically when deals close.
+- **This product:** Gives them playbook-driven projects, risk and recommendations, and AI assistance. Deal ingestion connects their CRM so projects are created automatically when deals close.
 
 ---
 
@@ -29,7 +29,7 @@ When adding new features or components, align with this document (see **Referenc
 
 ## Direction (future)
 
-- **Ops Inbox / Action queue:** One view aggregating overdue tasks, blockers, and recommendations so "what needs attention" is obvious.
+- **Action queue (future):** One view aggregating overdue tasks, blockers, and recommendations so "what needs attention" is obvious.
 - **AI:** Summarise risk, suggest next-best actions, triage the inbox, and (later) draft customer-facing messages.
 - **Deal ingestion visibility:** A visible "Import deal" flow in the UI and/or clear docs + webhook/sync so something happens when their CRM sends a deal.
 
@@ -39,6 +39,6 @@ When adding new features or components, align with this document (see **Referenc
 
 When adding features or new components, align with this document:
 
-- **New flows/UI:** Do they help the onboarding team run workflows, see risk, or take action? Do they fit the co-pilot and (future) inbox/AI direction?
+- **New flows/UI:** Do they help the onboarding team run workflows, see risk, or take action? Do they fit the co-pilot and AI direction?
 - **New APIs:** Are they for the team (internal), for the end customer (portal), or for external systems (e.g. CRM ingest)?
 - **Deal ingestion:** Any new "create project" path should be consistent with playbook selection and event logging; the canonical path from CRM is `POST /crm/deals/ingest`.

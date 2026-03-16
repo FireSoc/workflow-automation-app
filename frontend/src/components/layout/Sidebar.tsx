@@ -7,19 +7,17 @@ import {
   BookOpen,
   FileDown,
   FlaskConical,
-  Inbox,
   ChevronDown,
   ChevronRight,
-  Zap,
   Wrench,
 } from 'lucide-react';
+import { AgileLogo } from '@/components/AgileLogo';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const CORE_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/simulator', icon: FlaskConical, label: 'Simulator' },
-  { to: '/ops-inbox', icon: Inbox, label: 'Ops Inbox' },
 ];
 
 const WORKSPACE_NAV = [
@@ -49,7 +47,7 @@ function NavGroup({
 }) {
   return (
     <div className="space-y-1">
-      <p className="px-2.5 py-1.5 text-xs font-medium uppercase tracking-wider text-white/50 md:px-3">
+      <p className="px-2.5 py-1.5 text-xs font-medium uppercase tracking-wider text-[var(--sidebar-foreground)]/60 md:px-3">
         {label}
       </p>
       {items.map(({ to, icon: Icon, label: itemLabel }) => (
@@ -61,7 +59,7 @@ function NavGroup({
               'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors md:px-3',
               isActive
                 ? 'bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]'
-                : 'text-white/80 hover:bg-white/10 hover:text-white'
+                : 'text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]/20 hover:text-[var(--sidebar-foreground)]'
             )
           }
           onClick={() => onNavClick(to)}
@@ -96,20 +94,20 @@ export function Sidebar() {
       aria-label="Main navigation"
     >
       <div className="flex h-14 items-center gap-2 px-3 md:px-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[var(--sidebar-primary)] text-[var(--sidebar-primary-foreground)] md:size-10">
-          <Zap className="size-4 md:size-5" aria-hidden />
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-[var(--sidebar-primary)] md:size-10">
+          <AgileLogo size="sm" className="size-5 md:size-6" />
         </div>
         <div className="hidden flex-1 md:block">
           <p className="text-sm font-semibold leading-none">Agile</p>
-          <p className="mt-0.5 text-xs text-white/70 leading-none">Onboarding</p>
+          <p className="mt-0.5 text-xs text-[var(--sidebar-foreground)]/80 leading-none">Onboarding</p>
         </div>
       </div>
-      <Separator className="bg-white/10" />
+      <Separator className="bg-[var(--sidebar-border)]" />
       <nav className="flex-1 space-y-4 overflow-y-auto px-2 py-4">
         <NavGroup label="Core" items={CORE_NAV} onNavClick={handleNavClick} />
         <NavGroup label="Workspace" items={WORKSPACE_NAV} onNavClick={handleNavClick} />
         <div className="space-y-1">
-          <p className="px-2.5 py-1.5 text-xs font-medium uppercase tracking-wider text-white/50 md:px-3">
+          <p className="px-2.5 py-1.5 text-xs font-medium uppercase tracking-wider text-[var(--sidebar-foreground)]/60 md:px-3">
             Tools
           </p>
           <button
@@ -119,7 +117,7 @@ export function Sidebar() {
               'flex w-full items-center justify-between gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors md:px-3',
               isToolsActive(location.pathname)
                 ? 'bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]'
-                : 'text-white/80 hover:bg-white/10 hover:text-white'
+                : 'text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]/20 hover:text-[var(--sidebar-foreground)]'
             )}
             aria-expanded={expanded}
             aria-controls="tools-nav"
@@ -136,7 +134,7 @@ export function Sidebar() {
           </button>
           <div
             id="tools-nav"
-            className="mt-1 space-y-1 border-l border-white/20 pl-2 md:ml-3"
+            className="mt-1 space-y-1 border-l border-[var(--sidebar-border)] pl-2 md:ml-3"
             hidden={!expanded}
           >
             {TOOLS_NAV.map(({ to, icon: Icon, label }) => (
@@ -148,7 +146,7 @@ export function Sidebar() {
                     'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors md:px-3',
                     isActive
                       ? 'bg-[var(--sidebar-accent)] text-[var(--sidebar-accent-foreground)]'
-                      : 'text-white/80 hover:bg-white/10 hover:text-white'
+                      : 'text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)]/20 hover:text-[var(--sidebar-foreground)]'
                   )
                 }
                 onClick={() => { handleNavClick(to); setToolsOpen(true); }}
@@ -160,9 +158,9 @@ export function Sidebar() {
           </div>
         </div>
       </nav>
-      <Separator className="bg-white/10" />
+      <Separator className="bg-[var(--sidebar-border)]" />
       <div className="px-3 py-3 md:px-4">
-        <p className="text-xs text-white/60">Onboarding Ops</p>
+        <p className="text-xs text-[var(--sidebar-foreground)]/70">Onboarding Ops</p>
       </div>
     </aside>
   );

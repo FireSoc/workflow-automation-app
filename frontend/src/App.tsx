@@ -11,8 +11,6 @@ import { PlaybookInspector } from './pages/PlaybookInspector';
 import { CustomerPortalProject } from './pages/CustomerPortalProject';
 import { ImportDeal } from './pages/ImportDeal';
 import { Simulator } from './pages/Simulator';
-import { OpsInbox } from './pages/OpsInbox';
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -30,8 +28,7 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/at-risk" element={<Navigate to="/ops-inbox" replace />} />
-            <Route path="/ops-inbox" element={<OpsInbox />} />
+            <Route path="/at-risk" element={<Navigate to="/dashboard" replace />} />
             <Route path="/customers" element={<Customers />} />
             <Route path="/projects" element={<ProjectsLanding />} />
             <Route path="/projects/list" element={<Projects />} />

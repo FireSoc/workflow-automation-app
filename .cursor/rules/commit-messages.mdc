@@ -5,5 +5,23 @@ alwaysApply: true
 
 # Commit Messages
 
-- Use a single line only. No bullet list or multi-line body.
-- Keep it short and concise, under 100 characters.
+When writing or suggesting commit messages, you MUST follow these rules. No exceptions.
+
+1. **One line only.** Never add a blank line, a bullet list, or any body text after the first line.
+2. **Under 100 characters.** Count the line; if it exceeds 99 characters, shorten it.
+3. **No bullets or lists.** Do not use "- " or "* " or numbered list items in the message.
+
+**Wrong (do not do this):**
+```
+Refactor UI components and enhance styling consistency
+
+- Updated ErrorBoundary to use the new Button component.
+- Refactored Sidebar navigation.
+```
+
+**Correct:**
+```
+Refactor UI: ErrorBoundary, Sidebar, ActionPanel; consistent styles; remove unused components
+```
+
+If you are about to output a multi-line or bulleted commit message, stop and rewrite it as a single line under 100 characters.

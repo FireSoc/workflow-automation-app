@@ -217,3 +217,14 @@ def check_risk(project_id: int, db: Session = Depends(get_db)) -> RiskCheckRespo
             else "Project is not at risk."
         ),
     )
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(project_id: int, db: Session = Depends(get_db)) -> None:
+    project = db.query(OnboardingProject).filter(OnboardingProject.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found."
+        )
+    db.delete(project)
+    db.commit()

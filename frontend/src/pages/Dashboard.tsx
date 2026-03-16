@@ -10,7 +10,7 @@ import {
   LayoutGrid,
   Activity,
   FlaskConical,
-  Inbox,
+  Lightbulb,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { customersApi } from '../api/customers';
@@ -128,6 +128,23 @@ export function Dashboard() {
     return aggregatedTasks;
   }, [aggregatedTasks, tasksFilter]);
 
+  const orderedTasksForActions = useMemo(() => {
+    return [...filteredTasks].sort((a, b) => {
+      const aOverdue = isOverdue(a.due_date, a.status);
+      const bOverdue = isOverdue(b.due_date, b.status);
+      if (aOverdue && !bOverdue) return -1;
+      if (!aOverdue && bOverdue) return 1;
+      const aBlocked = a.status === 'blocked';
+      const bBlocked = b.status === 'blocked';
+      if (aBlocked && !bBlocked) return -1;
+      if (!aBlocked && bBlocked) return 1;
+      if (!a.due_date && !b.due_date) return 0;
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
+  }, [filteredTasks]);
+
   const todoBuckets = useMemo(() => {
     const incomplete = aggregatedTasks.filter((t) => t.status !== 'completed');
     const today = incomplete.filter((t) => isToday(t.due_date));
@@ -144,15 +161,27 @@ export function Dashboard() {
   const totalEvents = aggregatedEvents.length;
   const needsAttention = todoBuckets.overdue.length + (atRiskProjects > 0 ? 1 : 0);
 
+  const totalRecommendations = useMemo(
+    () =>
+      projectDetails.reduce(
+        (sum, d) => sum + (d.recommendations?.filter((r) => !r.dismissed).length ?? 0),
+        0
+      ),
+    [projectDetails]
+  );
+
+  const projectsWithRecommendations = useMemo(() => {
+    return projectDetails.filter(
+      (d) => (d.recommendations?.filter((r) => !r.dismissed).length ?? 0) > 0
+    );
+  }, [projectDetails]);
+
   useEffect(() => {
     setPageLayout({
       title: 'Overview',
       subtitle: 'Onboarding operations at a glance',
       action: (
         <div className="flex items-center gap-2">
-          <Link to="/ops-inbox" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}>
-            Ops Inbox
-          </Link>
           <Link to="/simulator" className={cn(buttonVariants({ size: 'sm' }), 'gap-1.5')}>
             <FlaskConical className="size-4" />
             Run simulation
@@ -169,13 +198,9 @@ export function Dashboard() {
     <PageContainer className="flex flex-col section-gap gap-6">
       <PageHeader
         title="Onboarding operations"
-        subtitle="Active projects, at-risk accounts, and quick access to the simulator and ops inbox."
+        subtitle="Active projects, at-risk accounts, and quick access to the simulator."
         action={
           <div className="flex items-center gap-2">
-            <Link to="/ops-inbox" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')}>
-              <Inbox className="size-4" />
-              Ops Inbox
-            </Link>
             <Link to="/simulator" className={cn(buttonVariants({ size: 'sm' }), 'gap-1.5')}>
               <FlaskConical className="size-4" />
               Run simulation
@@ -221,6 +246,11 @@ export function Dashboard() {
           value={totalEvents}
           icon={<Activity className="size-5 text-muted-foreground" />}
         />
+        <KpiCard
+          label="Recommendations"
+          value={totalRecommendations}
+          icon={<Lightbulb className="size-5 text-muted-foreground" />}
+        />
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -257,7 +287,7 @@ export function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTasks.slice(0, 8).map((task) => (
+                  {orderedTasksForActions.slice(0, 8).map((task) => (
                     <TableRow key={`${task.project_id}-${task.id}`}>
                       <TableCell className="font-medium">{task.title}</TableCell>
                       <TableCell>{STAGE_LABELS[task.stage]}</TableCell>
@@ -351,6 +381,41 @@ export function Dashboard() {
 
           <Card>
             <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Lightbulb className="size-4 text-muted-foreground" />
+                Projects with recommendations
+                {totalRecommendations > 0 && (
+                  <span className="text-xs font-normal text-muted-foreground">
+                    ({totalRecommendations})
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {projectsWithRecommendations.length === 0 ? (
+                <p className="py-2 text-sm text-muted-foreground">No open recommendations.</p>
+              ) : (
+                projectsWithRecommendations.map((detail) => {
+                  const project = projects?.find((p) => p.id === detail.id);
+                  const customer = customers?.find((c) => c.id === detail.customer_id);
+                  const name = project?.name ?? customer?.company_name ?? `Project #${detail.id}`;
+                  return (
+                    <Link
+                      key={detail.id}
+                      to={`/projects/${detail.id}`}
+                      className="flex items-center justify-between rounded-lg border border-input bg-background px-3 py-2 text-sm font-medium hover:bg-muted hover:text-foreground"
+                    >
+                      <span className="truncate">{name}</span>
+                      <ArrowRight className="size-3.5 shrink-0 text-muted-foreground" />
+                    </Link>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
               <CardTitle className="text-base">Quick links</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -376,11 +441,11 @@ export function Dashboard() {
               </Link>
               {atRiskProjects > 0 && (
                 <Link
-                  to="/ops-inbox"
+                  to="/projects"
                   className="mt-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm font-medium text-destructive"
                 >
                   <AlertTriangle className="size-4 shrink-0" />
-                  {atRiskProjects} at risk — Review in Ops Inbox
+                  {atRiskProjects} at risk — View projects
                   <ArrowRight className="size-3.5 ml-auto" />
                 </Link>
               )}

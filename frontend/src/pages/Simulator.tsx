@@ -245,7 +245,8 @@ export function Simulator() {
         </Button>
       ),
     });
-  }, [setPageLayout, tab, canRun, isPending, projectId, singleMutation, compareMutation]);
+    // Exclude singleMutation/compareMutation: they change reference every render and cause infinite loop
+  }, [setPageLayout, tab, canRun, isPending, projectId]);
 
   return (
     <PageContainer className="flex flex-col gap-6">
