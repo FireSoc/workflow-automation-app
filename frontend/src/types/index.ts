@@ -167,6 +167,17 @@ export interface ProjectCreate {
   notes?: string;
 }
 
+/** Payload for POST /projects/{id}/tasks (manual task creation). */
+export interface TaskCreatePayload {
+  title: string;
+  stage: OnboardingStage;
+  description?: string | null;
+  due_date?: string | null;
+  required_for_stage_completion?: boolean;
+  is_customer_required?: boolean;
+  requires_setup_data?: boolean;
+}
+
 export interface TaskCompleteResponse {
   task: Task;
   stage_advanced: boolean;

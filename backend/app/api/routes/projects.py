@@ -4,6 +4,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.deps import get_db
 from app.models.customer import Customer
 from app.models.onboarding_project import OnboardingProject
+from app.models.task import Task
+from app.models.enums import TaskStatus
 from app.models.recommendation import Recommendation
 from app.schemas.project import (
     OverdueCheckResponse,
@@ -15,7 +17,7 @@ from app.schemas.project import (
     RiskRead,
 )
 from app.schemas.ai import RiskSummaryResponse
-from app.schemas.task import TaskRead
+from app.schemas.task import TaskCreate, TaskRead
 from app.schemas.onboarding_event import OnboardingEventRead
 from app.schemas.recommendation import RecommendationRead
 from app.services.reminder_service import check_overdue_tasks
@@ -77,6 +79,31 @@ def get_project(project_id: int, db: Session = Depends(get_db)) -> OnboardingPro
 def list_project_tasks(project_id: int, db: Session = Depends(get_db)):
     project = _get_project_or_404(db, project_id)
     return project.tasks
+
+
+@router.post("/{project_id}/tasks", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+def create_project_task(
+    project_id: int,
+    payload: TaskCreate,
+    db: Session = Depends(get_db),
+):
+    """Create a task manually on a project."""
+    project = _get_project_or_404(db, project_id)
+    task = Task(
+        project_id=project.id,
+        stage=payload.stage,
+        title=payload.title,
+        description=payload.description,
+        due_date=payload.due_date,
+        status=TaskStatus.NOT_STARTED,
+        required_for_stage_completion=payload.required_for_stage_completion,
+        is_customer_required=payload.is_customer_required,
+        requires_setup_data=payload.requires_setup_data,
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return TaskRead.model_validate(task)
 
 
 @router.get("/{project_id}/events", response_model=list[OnboardingEventRead])
@@ -173,8 +200,21 @@ def get_project_risk_ai_summary(
         explanations=explanations,
     )
     summary = build_summary(project)
+    project_context = {
+        "name": project.name,
+        "current_stage": project.current_stage.value if project.current_stage else None,
+        "target_go_live_date": project.target_go_live_date.date().isoformat() if project.target_go_live_date else None,
+        "notes": (project.notes[:200] + "…") if project.notes and len(project.notes) > 200 else project.notes,
+        "company_name": project.customer.company_name if project.customer else None,
+        "industry": getattr(project.customer, "industry", None) if project.customer else None,
+        "blockers": [
+            {"title": t.title, "reason": getattr(t, "blocker_reason", None)}
+            for t in (project.tasks or [])
+            if getattr(t, "blocker_flag", False)
+        ][:5],
+    }
     risk_summary = generate_project_risk_summary(
-        risk, summary, project_id=project_id
+        risk, summary, project_id=project_id, project_context=project_context
     )
     return RiskSummaryResponse(risk_summary=risk_summary)
 

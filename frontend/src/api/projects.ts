@@ -6,6 +6,7 @@ import type {
   ProjectSummaryResponse,
   RiskRead,
   Task,
+  TaskCreatePayload,
   OnboardingEvent,
   OverdueCheckResponse,
   RiskCheckResponse,
@@ -17,6 +18,8 @@ export const projectsApi = {
   get: (id: number) => api.get<ProjectDetail>(`/projects/${id}`),
   create: (data: ProjectCreate) => api.post<Project>('/projects', data),
   tasks: (id: number) => api.get<Task[]>(`/projects/${id}/tasks`),
+  createTask: (projectId: number, data: TaskCreatePayload) =>
+    api.post<Task>(`/projects/${projectId}/tasks`, data),
   events: (id: number) => api.get<OnboardingEvent[]>(`/projects/${id}/events`),
   checkOverdue: (id: number) => api.post<OverdueCheckResponse>(`/projects/${id}/check-overdue`),
   checkRisk: (id: number) => api.post<RiskCheckResponse>(`/projects/${id}/check-risk`),

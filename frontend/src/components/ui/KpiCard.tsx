@@ -21,7 +21,7 @@ export function KpiCard({
 }: KpiCardProps) {
   return (
     <Card className={cn('overflow-hidden', className)}>
-      <CardContent className="flex flex-row items-start gap-4 pt-6">
+      <CardContent className="flex flex-row items-start gap-3 px-3 pt-4 pb-4">
         {icon != null && (
           <div
             className={cn(

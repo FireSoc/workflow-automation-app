@@ -1,6 +1,4 @@
-import { Link } from 'react-router-dom';
 import { MoreHorizontal } from 'lucide-react';
-import { AgileLogo } from '@/components/AgileLogo';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
@@ -8,6 +6,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { usePageLayout } from '@/contexts/PageLayoutContext';
 import { cn } from '@/lib/utils';
 
 interface TopbarProps {
@@ -16,11 +15,27 @@ interface TopbarProps {
 }
 
 export function Topbar({ userName = 'User' }: TopbarProps) {
+  const { pageLayout } = usePageLayout();
+
   return (
     <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border bg-background px-4 md:px-6">
-      <Link to="/dashboard" className="flex shrink-0 items-center" aria-label="Agile Onboarding home">
-        <AgileLogo size="sm" className="size-8" />
-      </Link>
+      <div className="min-w-0 flex-1 flex items-center gap-3">
+        {pageLayout.title ? (
+          <>
+            <h1 className="truncate text-lg font-semibold text-foreground">
+              {pageLayout.title}
+            </h1>
+            {pageLayout.subtitle && (
+              <span className="hidden truncate text-sm text-muted-foreground sm:inline">
+                {pageLayout.subtitle}
+              </span>
+            )}
+            {pageLayout.action != null && (
+              <span className="flex shrink-0">{pageLayout.action}</span>
+            )}
+          </>
+        ) : null}
+      </div>
       <div className="flex shrink-0 items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger

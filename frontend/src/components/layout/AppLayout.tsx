@@ -11,7 +11,7 @@ export function AppLayout() {
         <Sidebar />
         <div className="flex min-h-0 flex-1 flex-col">
           <Topbar />
-          <main className="flex-1 overflow-y-auto min-h-0 bg-background rounded-tl-xl border-l border-t border-border shadow-sm">
+          <main className="flex-1 overflow-y-auto min-h-0 bg-background border-l border-t border-border">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>

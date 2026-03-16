@@ -1,12 +1,29 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Play, GitCompare, AlertCircle, Sparkles } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import {
+  Play,
+  GitCompare,
+  AlertCircle,
+  Sparkles,
+  X,
+  ListOrdered,
+  RotateCcw,
+  ChevronDown,
+  Settings2,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { simulationsApi } from '../api/simulations';
 import { projectsApi } from '../api/projects';
 import { aiApi } from '../api/ai';
 import { SimulationResultPanel } from '../components/ui/SimulationResultPanel';
 import { InboxPreview } from '../components/ui/InboxPreview';
-import { BranchComparePanel } from '../components/ui/BranchComparePanel';
+import { BranchComparePanel, BranchEditor } from '../components/ui/BranchComparePanel';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeader } from '@/components/layout/PageHeader';
@@ -23,6 +40,7 @@ import type {
   SimulationResponse,
   SimulationCompareResponse,
   SimulationRecommendationsResponse,
+  BranchScenarioRequest,
 } from '../types';
 import { ApiError } from '../api/client';
 
@@ -30,6 +48,41 @@ const DEFAULT_ASSUMPTIONS: SimulationAssumptions = {
   customer_delay_days: 1,
   internal_delay_days: 0.5,
 };
+
+const DEFAULT_BRANCHES: BranchScenarioRequest[] = [
+  { name: 'Slow customer (3 day delay)', assumptions_override: { customer_delay_days: 3 }, task_overrides: [] },
+];
+
+// ─── Preset branch definitions ────────────────────────────────────────────────
+
+const BRANCH_PRESETS: { label: string; branch: BranchScenarioRequest }[] = [
+  {
+    label: 'Slow customer',
+    branch: {
+      name: 'Slow customer (3 day delay)',
+      assumptions_override: { customer_delay_days: 3 },
+      task_overrides: [],
+    },
+  },
+  {
+    label: 'Fast customer',
+    branch: {
+      name: 'Fast customer (0.5 day delay)',
+      assumptions_override: { customer_delay_days: 0.5 },
+      task_overrides: [],
+    },
+  },
+  {
+    label: 'Delayed internal',
+    branch: {
+      name: 'Delayed internal (2 day slip)',
+      assumptions_override: { internal_delay_days: 2 },
+      task_overrides: [],
+    },
+  },
+];
+
+// ─── Assumption controls ──────────────────────────────────────────────────────
 
 function AssumptionControls({
   assumptions,
@@ -72,6 +125,8 @@ function AssumptionControls({
   );
 }
 
+// ─── Error card ───────────────────────────────────────────────────────────────
+
 function SimError({ message }: { message: string }) {
   return (
     <Card className="border-destructive/30 bg-destructive/5">
@@ -83,6 +138,32 @@ function SimError({ message }: { message: string }) {
   );
 }
 
+// ─── Inline bold markdown renderer ───────────────────────────────────────────
+
+function InlineMd({ text }: { text: string }) {
+  const parts = text.split(/\*\*(.*?)\*\*/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        i % 2 === 1 ? (
+          <strong key={i} className="font-semibold text-foreground">
+            {part}
+          </strong>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
+function parseRec(text: string): { intro: string; bullets: string[] } {
+  const parts = text.split(/ - (?=\*\*)/);
+  return { intro: parts[0].replace(/:$/, '').trim(), bullets: parts.slice(1) };
+}
+
+// ─── AI recommendations block ─────────────────────────────────────────────────
+
 function AiRecommendationsBlock({
   aiRecommendations,
   aiPending,
@@ -90,6 +171,7 @@ function AiRecommendationsBlock({
   aiQuery,
   setAiQuery,
   onAsk,
+  suggestedQuestion,
 }: {
   aiRecommendations: SimulationRecommendationsResponse | null;
   aiPending: boolean;
@@ -97,6 +179,7 @@ function AiRecommendationsBlock({
   aiQuery: string;
   setAiQuery: (q: string) => void;
   onAsk: () => void;
+  suggestedQuestion?: string;
 }) {
   return (
     <div className="space-y-4">
@@ -110,23 +193,67 @@ function AiRecommendationsBlock({
         <p className="text-sm text-destructive">Could not load recommendations.</p>
       )}
       {aiRecommendations?.recommendations && aiRecommendations.recommendations.length > 0 && (
-        <ul className="list-inside list-disc space-y-1 text-sm text-foreground">
-          {aiRecommendations.recommendations.map((rec, i) => (
-            <li key={i}>{rec}</li>
-          ))}
-        </ul>
+        <div className="space-y-3">
+          {aiRecommendations.recommendations.map((rec, i) => {
+            const { intro, bullets } = parseRec(rec);
+            if (bullets.length > 0) {
+              return (
+                <div key={i} className="space-y-2">
+                  {intro && (
+                    <p className="text-sm text-muted-foreground">
+                      <InlineMd text={intro} />
+                    </p>
+                  )}
+                  <ul className="space-y-2">
+                    {bullets.map((bullet, j) => (
+                      <li key={j} className="flex items-start gap-2.5 text-sm text-foreground">
+                        <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                        <span>
+                          <InlineMd text={bullet} />
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            }
+            return (
+              <div key={i} className="flex items-start gap-2.5 text-sm text-foreground">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-primary" />
+                <span>
+                  <InlineMd text={rec} />
+                </span>
+              </div>
+            );
+          })}
+        </div>
       )}
+
       <div className="space-y-2 border-t border-border pt-4">
         <Label htmlFor="ai-query" className="text-xs text-muted-foreground">
           Ask a question about this simulation
         </Label>
+
+        {/* Part 5: Suggested question chip */}
+        {suggestedQuestion && !aiQuery && (
+          <button
+            type="button"
+            onClick={() => setAiQuery(suggestedQuestion)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-xs text-primary hover:bg-primary/10 transition-colors"
+          >
+            <Sparkles className="h-3 w-3" />
+            {suggestedQuestion}
+          </button>
+        )}
+
         <div className="flex flex-wrap items-center gap-2">
           <Input
             id="ai-query"
             type="text"
-            placeholder="e.g. Which branch is safest?"
+            placeholder={suggestedQuestion ?? 'e.g. Which branch is safest?'}
             value={aiQuery}
             onChange={(e) => setAiQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && aiQuery.trim()) onAsk(); }}
             className="max-w-sm"
           />
           <Button
@@ -141,7 +268,7 @@ function AiRecommendationsBlock({
         </div>
         {aiRecommendations?.answer != null && aiRecommendations?.answer !== '' && (
           <p className="mt-2 rounded-lg bg-muted/50 p-3 text-sm text-foreground">
-            {aiRecommendations?.answer}
+            <InlineMd text={aiRecommendations.answer ?? ''} />
           </p>
         )}
       </div>
@@ -149,17 +276,40 @@ function AiRecommendationsBlock({
   );
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 type Tab = 'simulate' | 'compare';
 
 export function Simulator() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const didInitFromUrl = useRef(false);
+
   const [projectId, setProjectId] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>('simulate');
   const [assumptions, setAssumptions] = useState<SimulationAssumptions>(DEFAULT_ASSUMPTIONS);
+  const [branches, setBranches] = useState<BranchScenarioRequest[]>(DEFAULT_BRANCHES);
   const { setPageLayout } = usePageLayout();
+
+  // Part 7: On mount, read URL params into state (only once)
+  useEffect(() => {
+    if (didInitFromUrl.current) return;
+    didInitFromUrl.current = true;
+    const pid = searchParams.get('projectId');
+    const t = searchParams.get('tab');
+    if (pid && !isNaN(Number(pid))) setProjectId(Number(pid));
+    if (t === 'simulate' || t === 'compare') setTab(t as Tab);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery({
     queryKey: ['projects'],
     queryFn: () => projectsApi.list(),
+  });
+
+  // Part 3: Fetch baseline when Compare tab is active and a project is selected
+  const { data: projectBaseline, isLoading: baselineLoading } = useQuery({
+    queryKey: ['project-baseline', projectId],
+    queryFn: () => simulationsApi.getProjectBaseline(projectId!),
+    enabled: tab === 'compare' && projectId != null,
   });
 
   const [singleResult, setSingleResult] = useState<SimulationResponse | null>(null);
@@ -167,13 +317,20 @@ export function Simulator() {
   const [aiRecommendations, setAiRecommendations] = useState<SimulationRecommendationsResponse | null>(null);
   const [aiQuery, setAiQuery] = useState('');
 
+  // Part 6: Snapshot of assumptions used in last run
+  const [lastRunAssumptions, setLastRunAssumptions] = useState<SimulationAssumptions | null>(null);
+
+  // Part 4: Dismiss state for Compare tip
+  const [compareTipDismissed, setCompareTipDismissed] = useState(false);
+
   const singleMutation = useMutation({
-    mutationFn: (pid: number) =>
-      simulationsApi.runFromProject(pid, assumptions),
+    mutationFn: (pid: number) => simulationsApi.runFromProject(pid, assumptions),
     onSuccess: (data) => {
       setSingleResult(data);
       setCompareResult(null);
       setAiRecommendations(null);
+      setAiQuery('');
+      setLastRunAssumptions({ ...assumptions });
       aiRecMutation.mutate({ result: data });
     },
   });
@@ -185,18 +342,15 @@ export function Simulator() {
         customer_type: baseline.customer_type,
         baseline_tasks: baseline.tasks,
         baseline_assumptions: assumptions,
-        branches: [
-          {
-            name: 'Slow customer (3 day delay)',
-            assumptions_override: { customer_delay_days: 3 },
-          },
-        ],
+        branches: branches.length > 0 ? branches : DEFAULT_BRANCHES,
       });
     },
     onSuccess: (data) => {
       setCompareResult(data);
       setSingleResult(null);
       setAiRecommendations(null);
+      setAiQuery('');
+      setLastRunAssumptions({ ...assumptions });
       aiRecMutation.mutate({ result: data });
     },
   });
@@ -221,16 +375,50 @@ export function Simulator() {
   const canRun = projectId != null && selectedProject != null;
   const hasResult = singleResult != null || compareResult != null;
 
+  // Part 7: Sync project selection and tab to URL
+  function handleProjectChange(newId: number | null) {
+    setProjectId(newId);
+    setSingleResult(null);
+    setCompareResult(null);
+    setLastRunAssumptions(null);
+    const params = new URLSearchParams(searchParams);
+    if (newId != null) params.set('projectId', String(newId));
+    else params.delete('projectId');
+    setSearchParams(params, { replace: true });
+  }
+
+  function handleTabChange(newTab: Tab) {
+    setTab(newTab);
+    if (newTab === 'compare' && branches.length === 0) setBranches(DEFAULT_BRANCHES);
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', newTab);
+    setSearchParams(params, { replace: true });
+  }
+
+  function runSimulation() {
+    if (tab === 'simulate' && projectId != null) singleMutation.mutate(projectId);
+    if (tab === 'compare' && projectId != null) compareMutation.mutate(projectId);
+  }
+
+  // Part 3: Preset handler — appends a preset branch
+  function applyPreset(preset: BranchScenarioRequest) {
+    setBranches((prev) => [...prev, { ...preset }]);
+  }
+
+  // Part 5: Suggested question depending on context
+  const suggestedQuestion = compareResult
+    ? 'Which branch is the safest path to go-live?'
+    : singleResult
+    ? 'What should I do first to reduce risk?'
+    : undefined;
+
   useEffect(() => {
     setPageLayout({
       title: 'Simulator',
       subtitle: 'Test timeline risk, see downstream impact, and review AI recommendations.',
       action: (
         <Button
-          onClick={() => {
-            if (tab === 'simulate' && projectId != null) singleMutation.mutate(projectId);
-            if (tab === 'compare' && projectId != null) compareMutation.mutate(projectId);
-          }}
+          onClick={runSimulation}
           disabled={isPending || !canRun}
           className="gap-1.5"
         >
@@ -245,8 +433,7 @@ export function Simulator() {
         </Button>
       ),
     });
-    // Exclude singleMutation/compareMutation: they change reference every render and cause infinite loop
-  }, [setPageLayout, tab, canRun, isPending, projectId]);
+  }, [setPageLayout, tab, canRun, isPending]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <PageContainer className="flex flex-col gap-6">
@@ -254,14 +441,7 @@ export function Simulator() {
         title="Simulator"
         subtitle="Test timeline risk, see downstream impact, and review AI recommendations."
         action={
-          <Button
-            onClick={() => {
-              if (tab === 'simulate' && projectId != null) singleMutation.mutate(projectId);
-              if (tab === 'compare' && projectId != null) compareMutation.mutate(projectId);
-            }}
-            disabled={isPending || !canRun}
-            className="gap-1.5"
-          >
+          <Button onClick={runSimulation} disabled={isPending || !canRun} className="gap-1.5">
             {isPending ? (
               <LoadingSpinner size="sm" />
             ) : tab === 'compare' ? (
@@ -274,7 +454,8 @@ export function Simulator() {
         }
       />
 
-      {hasResult && selectedProject && (
+      {/* Part 6: Assumptions used + project context */}
+      {hasResult && selectedProject && lastRunAssumptions && (
         <div className="flex flex-wrap items-center gap-4 rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
           <span className="font-medium text-foreground">
             Project: {selectedProject.name ?? `#${selectedProject.id}`}
@@ -282,117 +463,205 @@ export function Simulator() {
           <span className="text-muted-foreground">
             {tab === 'simulate' ? 'Single run' : 'Comparison'}
           </span>
+          <span className="text-xs text-muted-foreground ml-auto">
+            Assumptions used: customer delay {lastRunAssumptions.customer_delay_days ?? 1} day(s) · internal delay {lastRunAssumptions.internal_delay_days ?? 0.5} day(s)
+          </span>
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
-        <aside className="space-y-6">
-          <Card>
-            <CardContent className="pt-6">
-              <SectionHeader title="Select project" description="Use the workflow from an existing project." />
+      {/* Compact control bar: project + assumptions + mode + run */}
+      <Card className="border-border">
+        <CardContent className="py-3 px-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <Label htmlFor="sim-project" className="text-xs font-medium text-muted-foreground whitespace-nowrap">
+                Project
+              </Label>
               {projectsLoading ? (
-                <div className="mt-4 flex items-center gap-2 text-muted-foreground">
+                <LoadingSpinner size="sm" />
+              ) : (
+                <select
+                  id="sim-project"
+                  value={projectId ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    handleProjectChange(v === '' ? null : Number(v));
+                  }}
+                  className={cn(
+                    'flex h-8 w-full min-w-[140px] max-w-[200px] rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
+                  )}
+                >
+                  <option value="">— Select —</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name ?? `#${p.id}`}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  Assumptions ({assumptions.customer_delay_days ?? 1}d / {(assumptions.internal_delay_days ?? 0.5)}d)
+                  <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-72 p-4">
+                <p className="text-xs font-medium text-muted-foreground mb-3">Delay assumptions (baseline)</p>
+                <AssumptionControls assumptions={assumptions} onChange={setAssumptions} />
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Tabs value={tab} onValueChange={(v) => handleTabChange(v as Tab)}>
+              <TabsList className="h-8 grid grid-cols-2">
+                <TabsTrigger value="simulate" className="text-xs">Simulate</TabsTrigger>
+                <TabsTrigger value="compare" className="text-xs">Compare</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <Button
+              size="sm"
+              className="gap-1.5 h-8"
+              onClick={runSimulation}
+              disabled={isPending || !canRun || (tab === 'compare' && branches.length === 0)}
+            >
+              {isPending ? (
+                <LoadingSpinner size="sm" />
+              ) : tab === 'compare' ? (
+                <GitCompare className="size-4" />
+              ) : (
+                <Play className="size-4" />
+              )}
+              {tab === 'compare' ? 'Run compare' : 'Run simulation'}
+            </Button>
+          </div>
+
+          {/* Compare: expandable branches section */}
+          {tab === 'compare' && (
+            <div className="mt-4 pt-4 border-t border-border space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-muted-foreground">Branches ({branches.length})</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {BRANCH_PRESETS.map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => applyPreset(preset.branch)}
+                      className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      + {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {baselineLoading && projectId != null ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <LoadingSpinner size="sm" />
-                  Loading projects…
+                  Loading baseline…
                 </div>
               ) : (
-                <div className="mt-4 space-y-2">
-                  <Label htmlFor="sim-project">Project</Label>
-                  <select
-                    id="sim-project"
-                    value={projectId ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      setProjectId(v === '' ? null : Number(v));
-                      setSingleResult(null);
-                      setCompareResult(null);
-                    }}
-                    className={cn(
-                      'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                    )}
-                  >
-                    <option value="">— Select a project —</option>
-                    {projects.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name ?? `Project #${p.id}`}
-                      </option>
-                    ))}
-                  </select>
-                  {selectedProject && (
-                    <p className="text-xs text-muted-foreground">
-                      Simulating this project&apos;s current tasks and stages.
-                    </p>
-                  )}
-                </div>
+                <BranchEditor
+                  branches={branches}
+                  baselineTasks={projectBaseline?.tasks ?? []}
+                  onChange={setBranches}
+                />
               )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <SectionHeader title="Assumptions" description="Delay assumptions applied in the simulation." />
-              <div className="mt-4">
-                <AssumptionControls assumptions={assumptions} onChange={setAssumptions} />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="simulate">Simulate</TabsTrigger>
-                  <TabsTrigger value="compare">Compare</TabsTrigger>
-                </TabsList>
-              </Tabs>
-              {tab === 'compare' && (
-                <p className="mt-3 text-xs text-muted-foreground">
-                  Compares current assumptions vs. &quot;Slow customer&quot; (3 day delay).
-                </p>
+              {branches.length === 0 && (
+                <p className="text-xs text-amber-500">Add at least one branch to run a comparison.</p>
               )}
-              <Button
-                className="mt-4 w-full gap-1.5"
-                onClick={() => {
-                  if (tab === 'simulate' && projectId != null) singleMutation.mutate(projectId);
-                  if (tab === 'compare' && projectId != null) compareMutation.mutate(projectId);
-                }}
-                disabled={isPending || !canRun}
-              >
-                {isPending ? (
-                  <LoadingSpinner size="sm" />
-                ) : tab === 'compare' ? (
-                  <GitCompare className="size-4" />
-                ) : (
-                  <Play className="size-4" />
-                )}
-                {tab === 'compare' ? 'Run compare' : 'Run simulation'}
-              </Button>
-            </CardContent>
-          </Card>
-        </aside>
-
-        <div className="min-w-0 space-y-6">
-          {!canRun && (
-            <p className="text-xs text-amber-600">Select a project in the left panel to run a simulation.</p>
+            </div>
           )}
+        </CardContent>
+      </Card>
+
+      <div className="min-w-0 space-y-6">
+          {/* Part 4: Better empty state */}
+          {!canRun && (
+            <div className="rounded-lg border border-border bg-muted/20 px-4 py-5 space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                Pick a project to get started
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Select a project from the left panel to simulate its current workflow with different
+                delay assumptions. Use <strong className="text-foreground font-medium">Compare</strong> to
+                test scenarios side-by-side and find the safest path to go-live.
+              </p>
+              <Link
+                to="/projects/list"
+                className="inline-block text-xs text-primary underline-offset-4 hover:underline mt-1"
+              >
+                View all projects →
+              </Link>
+            </div>
+          )}
+
           {errorMsg && <SimError message={errorMsg} />}
 
+          {/* Part 4: Post-run tip to try Compare */}
+          {tab === 'simulate' && singleResult && !compareTipDismissed && (
+            <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+              <ListOrdered className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <p className="text-sm text-foreground flex-1">
+                <strong>Tip:</strong> Switch to the{' '}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('compare')}
+                  className="text-primary underline underline-offset-2 hover:no-underline font-medium"
+                >
+                  Compare tab
+                </button>{' '}
+                to test different delay scenarios side-by-side and see which is safest.
+              </p>
+              <button
+                type="button"
+                onClick={() => setCompareTipDismissed(true)}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+                aria-label="Dismiss tip"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Part 7: Run again button above results */}
+          {hasResult && canRun && (
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={runSimulation}
+                disabled={isPending}
+                className="gap-1.5"
+              >
+                {isPending ? <LoadingSpinner size="sm" /> : <RotateCcw className="h-3.5 w-3.5" />}
+                Run again
+              </Button>
+            </div>
+          )}
+
+          {/* Simulate results: use horizontal space */}
           {tab === 'simulate' && singleResult && (
-            <>
-              <Card>
-                <CardContent className="pt-6">
-                  <SectionHeader title="Results" description="Risk and timeline from the simulation." />
-                  <div className="mt-4">
-                    <SimulationResultPanel result={singleResult} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <Card className="xl:col-span-2">
+                <CardContent className="pt-3 px-0">
+                  <div className="px-4">
+                    <SectionHeader title="Results" description="Risk, timeline, and task breakdown from the simulation." />
+                    <div className="mt-4">
+                      <SimulationResultPanel result={singleResult} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-3 px-0">
+                  <div className="px-4">
                   <SectionHeader
-                    title="AI insights"
-                    description="Recommendations and Q&A from the simulation."
+                    title="AI recommendations"
+                    description="AI-generated insights and Q&A from the simulation."
                     action={<Sparkles className="size-4 text-primary" />}
                   />
                   <div className="mt-4">
@@ -402,84 +671,99 @@ export function Simulator() {
                       aiError={aiRecMutation.isError}
                       aiQuery={aiQuery}
                       setAiQuery={setAiQuery}
+                      suggestedQuestion={suggestedQuestion}
                       onAsk={() => {
                         const q = aiQuery.trim();
                         if (q) aiRecMutation.mutate({ result: singleResult, query: q });
                       }}
                     />
                   </div>
+                  </div>
                 </CardContent>
               </Card>
 
-              {singleResult.inbox_preview && (
+              {singleResult.inbox_preview ? (
                 <Card>
-                  <CardContent className="pt-6">
-                    <SectionHeader title="Virtual inbox preview" description="How work lands in the ops inbox." />
-                    <div className="mt-4">
-                      <InboxPreview inbox={singleResult.inbox_preview} />
+                  <CardContent className="pt-3 px-0">
+                    <div className="px-4">
+                      <SectionHeader title="Virtual inbox preview" description="How work lands in the ops inbox." />
+                      <div className="mt-4">
+                        <InboxPreview inbox={singleResult.inbox_preview} />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
+              ) : (
+                <div className="hidden xl:block" aria-hidden />
               )}
-            </>
+            </div>
           )}
 
+          {/* Compare results: horizontal layout */}
           {tab === 'compare' && compareResult && (
-            <>
-              <Card>
-                <CardContent className="pt-6">
-                  <SectionHeader title="Comparison" description="Baseline vs. slow customer scenario." />
-                  <div className="mt-4">
-                    <BranchComparePanel compareResult={compareResult} />
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              <Card className="xl:col-span-2">
+                <CardContent className="pt-3 px-0">
+                  <div className="px-4">
+                    <SectionHeader title="Scenario comparison" description="Baseline vs. your configured branches." />
+                    <div className="mt-4">
+                      <BranchComparePanel compareResult={compareResult} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
-                  <SectionHeader
-                    title="AI insights"
-                    description="Recommendations from the comparison."
-                    action={<Sparkles className="size-4 text-primary" />}
-                  />
-                  <div className="mt-4">
-                    <AiRecommendationsBlock
-                      aiRecommendations={aiRecommendations}
-                      aiPending={aiRecMutation.isPending}
-                      aiError={aiRecMutation.isError}
-                      aiQuery={aiQuery}
-                      setAiQuery={setAiQuery}
-                      onAsk={() => {
-                        const q = aiQuery.trim();
-                        if (q) aiRecMutation.mutate({ result: compareResult, query: q });
-                      }}
+                <CardContent className="pt-3 px-0">
+                  <div className="px-4">
+                    <SectionHeader
+                      title="AI recommendations"
+                      description="AI-generated insights from the comparison."
+                      action={<Sparkles className="size-4 text-primary" />}
                     />
+                    <div className="mt-4">
+                      <AiRecommendationsBlock
+                        aiRecommendations={aiRecommendations}
+                        aiPending={aiRecMutation.isPending}
+                        aiError={aiRecMutation.isError}
+                        aiQuery={aiQuery}
+                        setAiQuery={setAiQuery}
+                        suggestedQuestion={suggestedQuestion}
+                        onAsk={() => {
+                          const q = aiQuery.trim();
+                          if (q) aiRecMutation.mutate({ result: compareResult, query: q });
+                        }}
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card>
-                <CardContent className="pt-6">
-                  <SectionHeader title="Baseline results" description="Full simulation for current assumptions." />
-                  <div className="mt-4">
-                    <SimulationResultPanel result={compareResult.baseline} />
+                <CardContent className="pt-3 px-0">
+                  <div className="px-4">
+                    <SectionHeader title="Baseline results" description="Full simulation for the current baseline assumptions." />
+                    <div className="mt-4">
+                      <SimulationResultPanel result={compareResult.baseline} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>
 
               {compareResult.baseline.inbox_preview && (
-                <Card>
-                  <CardContent className="pt-6">
-                    <SectionHeader title="Baseline inbox" description="Virtual inbox for baseline." />
-                    <div className="mt-4">
-                      <InboxPreview inbox={compareResult.baseline.inbox_preview} />
+                <Card className="xl:col-span-2">
+                  <CardContent className="pt-3 px-0">
+                    <div className="px-4">
+                      <SectionHeader title="Baseline inbox" description="Virtual inbox for the baseline scenario." />
+                      <div className="mt-4">
+                        <InboxPreview inbox={compareResult.baseline.inbox_preview} />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
-            </>
+            </div>
           )}
-        </div>
       </div>
     </PageContainer>
   );

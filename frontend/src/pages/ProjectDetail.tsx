@@ -17,6 +17,7 @@ import {
   ArrowRightCircle,
   Sparkles,
   FlaskConical,
+  Plus,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { aiApi } from '../api/ai';
@@ -49,8 +50,11 @@ import {
 } from '@/components/ui/table';
 import { Badge as ShadcnBadge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { Task } from '../types';
+import type { Task, OnboardingStage } from '../types';
+import { STAGE_ORDER, STAGE_LABELS } from '../types';
 
 function TaskRow({
   task,
@@ -135,6 +139,16 @@ export function ProjectDetail() {
 
   const [completingTaskId, setCompletingTaskId] = useState<number | null>(null);
   const [actionMsg, setActionMsg] = useState<{ text: string; type: 'success' | 'info' } | null>(null);
+  const [addTaskSheetOpen, setAddTaskSheetOpen] = useState(false);
+  const [newTaskForm, setNewTaskForm] = useState({
+    title: '',
+    stage: 'kickoff' as OnboardingStage,
+    description: '',
+    due_date: '',
+    required_for_stage_completion: true,
+    is_customer_required: false,
+    requires_setup_data: false,
+  });
 
   const { data: project, isPending, isError, refetch } = useQuery({
     queryKey: ['project', projectId],
@@ -228,6 +242,29 @@ export function ProjectDetail() {
     },
   });
 
+  const createTaskMutation = useMutation({
+    mutationFn: (payload: { title: string; stage: OnboardingStage; description?: string; due_date?: string; required_for_stage_completion: boolean; is_customer_required: boolean; requires_setup_data: boolean }) =>
+      projectsApi.createTask(projectId, {
+        ...payload,
+        due_date: payload.due_date || undefined,
+        description: payload.description || undefined,
+      }),
+    onSuccess: () => {
+      invalidate();
+      setAddTaskSheetOpen(false);
+      setNewTaskForm({
+        title: '',
+        stage: 'kickoff',
+        description: '',
+        due_date: '',
+        required_for_stage_completion: true,
+        is_customer_required: false,
+        requires_setup_data: false,
+      });
+      showMsg('Task added.');
+    },
+  });
+
   const { data: risk } = useQuery({
     queryKey: ['project-risk', projectId],
     queryFn: () => projectsApi.getRisk(projectId),
@@ -274,7 +311,13 @@ export function ProjectDetail() {
   const recommendations = project.recommendations ?? [];
   const blockedTasks = tasks.filter((t) => t.blocker_flag);
 
-  const tasksByStage = tasks.reduce<Record<string, Task[]>>((acc, task) => {
+  // Only show tasks for current and upcoming stages (exclude completed stages)
+  const currentStageIndex = STAGE_ORDER.indexOf(project.current_stage);
+  const stagesToShow = STAGE_ORDER.slice(Math.max(0, currentStageIndex));
+  const stageSet = new Set(stagesToShow);
+  const relevantTasks = tasks.filter((t) => stageSet.has(t.stage));
+
+  const tasksByStage = relevantTasks.reduce<Record<string, Task[]>>((acc, task) => {
     if (!acc[task.stage]) acc[task.stage] = [];
     acc[task.stage].push(task);
     return acc;
@@ -550,22 +593,51 @@ export function ProjectDetail() {
 
             <section aria-labelledby="tasks-heading">
               <Card>
-                <CardHeader className="border-b pb-4">
-                  <CardTitle id="tasks-heading" className="text-sm">
-                    Tasks
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    <Star className="h-3 w-3 text-amber-500 fill-amber-400 inline mr-0.5" />
-                    Required for stage gate
-                  </p>
+                <CardHeader className="flex flex-row items-start justify-between gap-4 border-b pb-4">
+                  <div>
+                    <CardTitle id="tasks-heading" className="text-sm">
+                      Tasks
+                    </CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      <Star className="h-3 w-3 text-amber-500 fill-amber-400 inline mr-0.5" />
+                      Required for stage gate
+                    </p>
+                  </div>
+                  {project.status !== 'completed' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 shrink-0"
+                      onClick={() => {
+                        setNewTaskForm((f) => ({
+                          ...f,
+                          stage: project.current_stage,
+                          title: '',
+                          description: '',
+                          due_date: '',
+                        }));
+                        setAddTaskSheetOpen(true);
+                      }}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add task
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent className="p-0">
                   {tasks.length === 0 ? (
                     <div className="p-6">
                       <EmptyState title="No tasks" description="Tasks will be generated when the project is created." />
                     </div>
+                  ) : relevantTasks.length === 0 ? (
+                    <div className="p-6">
+                      <EmptyState title="No tasks in current or upcoming stages" description="All tasks are in completed stages." />
+                    </div>
                   ) : (
-                    Object.entries(tasksByStage).map(([stage, stageTasks]) => (
+                    stagesToShow.map((stage) => {
+                      const stageTasks = tasksByStage[stage] ?? [];
+                      if (stageTasks.length === 0) return null;
+                      return (
                       <div key={stage}>
                         <div className="px-5 py-2 bg-muted/50 border-b border-border">
                           <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -593,7 +665,8 @@ export function ProjectDetail() {
                           </TableBody>
                         </Table>
                       </div>
-                    ))
+                      );
+                    })
                   )}
                 </CardContent>
               </Card>
@@ -603,7 +676,7 @@ export function ProjectDetail() {
           <aside>
             <Card aria-labelledby="events-heading">
               <CardHeader className="flex flex-row items-center gap-2 border-b pb-4">
-                <Activity className="h-4 w-4 text-muted-foreground" />
+                <Activity className="h-4 w-4 text-muted-foreground" aria-hidden />
                 <CardTitle id="events-heading" className="text-sm">
                   Activity
                 </CardTitle>
@@ -619,6 +692,115 @@ export function ProjectDetail() {
             </Card>
           </aside>
         </div>
+
+        <Sheet open={addTaskSheetOpen} onOpenChange={setAddTaskSheetOpen}>
+          <SheetContent side="right" className="flex flex-col">
+            <SheetHeader>
+              <SheetTitle>Add task</SheetTitle>
+              <p className="text-sm text-muted-foreground">Define a new task for this project.</p>
+            </SheetHeader>
+            <form
+              className="flex flex-1 flex-col gap-4 p-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newTaskForm.title.trim()) return;
+                createTaskMutation.mutate({
+                  title: newTaskForm.title.trim(),
+                  stage: newTaskForm.stage,
+                  description: newTaskForm.description.trim() || undefined,
+                  due_date: newTaskForm.due_date ? `${newTaskForm.due_date}T12:00:00.000Z` : undefined,
+                  required_for_stage_completion: newTaskForm.required_for_stage_completion,
+                  is_customer_required: newTaskForm.is_customer_required,
+                  requires_setup_data: newTaskForm.requires_setup_data,
+                });
+              }}
+            >
+              <div className="space-y-2">
+                <Label htmlFor="new-task-title">Title *</Label>
+                <Input
+                  id="new-task-title"
+                  value={newTaskForm.title}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, title: e.target.value }))}
+                  placeholder="e.g. Send welcome pack"
+                  required
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-task-stage">Stage</Label>
+                <select
+                  id="new-task-stage"
+                  value={newTaskForm.stage}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, stage: e.target.value as OnboardingStage }))}
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {STAGE_ORDER.map((s) => (
+                    <option key={s} value={s}>{STAGE_LABELS[s]}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-task-description">Description (optional)</Label>
+                <textarea
+                  id="new-task-description"
+                  value={newTaskForm.description}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, description: e.target.value }))}
+                  placeholder="Brief description of the task"
+                  rows={2}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-task-due">Due date (optional)</Label>
+                <Input
+                  id="new-task-due"
+                  type="date"
+                  value={newTaskForm.due_date}
+                  onChange={(e) => setNewTaskForm((f) => ({ ...f, due_date: e.target.value }))}
+                  className="w-full"
+                />
+              </div>
+              <div className="space-y-3 border-t border-border pt-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={newTaskForm.required_for_stage_completion}
+                    onChange={(e) => setNewTaskForm((f) => ({ ...f, required_for_stage_completion: e.target.checked }))}
+                    className="rounded border-input"
+                  />
+                  Required for stage completion
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={newTaskForm.is_customer_required}
+                    onChange={(e) => setNewTaskForm((f) => ({ ...f, is_customer_required: e.target.checked }))}
+                    className="rounded border-input"
+                  />
+                  Customer required
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={newTaskForm.requires_setup_data}
+                    onChange={(e) => setNewTaskForm((f) => ({ ...f, requires_setup_data: e.target.checked }))}
+                    className="rounded border-input"
+                  />
+                  Requires setup data
+                </label>
+              </div>
+              <div className="mt-auto flex gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setAddTaskSheetOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={createTaskMutation.isPending || !newTaskForm.title.trim()}>
+                  {createTaskMutation.isPending ? <LoadingSpinner size="sm" /> : <Plus className="h-3.5 w-3.5" />}
+                  Add task
+                </Button>
+              </div>
+            </form>
+          </SheetContent>
+        </Sheet>
     </PageContainer>
   );
 }

@@ -4,11 +4,9 @@ import { useQuery, useQueries } from '@tanstack/react-query';
 import {
   FolderKanban,
   AlertTriangle,
-  CheckCircle2,
   Users,
   ArrowRight,
   LayoutGrid,
-  Activity,
   FlaskConical,
   Lightbulb,
 } from 'lucide-react';
@@ -158,7 +156,6 @@ export function Dashboard() {
   const atRiskProjects = projects?.filter((p) => p.status === 'at_risk' || p.risk_flag).length ?? 0;
   const totalTasks = aggregatedTasks.length;
   const completedTasks = aggregatedTasks.filter((t) => t.status === 'completed').length;
-  const totalEvents = aggregatedEvents.length;
   const needsAttention = todoBuckets.overdue.length + (atRiskProjects > 0 ? 1 : 0);
 
   const totalRecommendations = useMemo(
@@ -195,7 +192,7 @@ export function Dashboard() {
   if (loadingProjects || loadingCustomers) return <PageLoading />;
 
   return (
-    <PageContainer className="flex flex-col section-gap gap-6">
+    <PageContainer className="page-container--compact flex flex-col section-gap gap-6">
       <PageHeader
         title="Onboarding operations"
         subtitle="Active projects, at-risk accounts, and quick access to the simulator."
@@ -216,7 +213,7 @@ export function Dashboard() {
         />
       )}
 
-      <section aria-labelledby="kpi-heading" className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
+      <section aria-labelledby="kpi-heading" className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <h2 id="kpi-heading" className="sr-only">
           North star metrics
         </h2>
@@ -235,16 +232,6 @@ export function Dashboard() {
           value={atRiskProjects}
           icon={<AlertTriangle className="size-5 text-destructive" />}
           iconClassName="bg-destructive/10"
-        />
-        <KpiCard
-          label="Completed"
-          value={completedProjects}
-          icon={<CheckCircle2 className="size-5 text-muted-foreground" />}
-        />
-        <KpiCard
-          label="Activities"
-          value={totalEvents}
-          icon={<Activity className="size-5 text-muted-foreground" />}
         />
         <KpiCard
           label="Recommendations"
@@ -315,7 +302,7 @@ export function Dashboard() {
             </CardHeader>
             <CardContent className="p-0">
               {!projects?.length ? (
-                <div className="px-5 py-8 text-center text-sm text-muted-foreground">
+                <div className="px-3 py-6 text-center text-sm text-muted-foreground">
                   No projects. <Link to="/projects" className="text-primary hover:underline">Create one</Link>.
                 </div>
               ) : (

@@ -94,7 +94,7 @@ export function Sidebar() {
       aria-label="Main navigation"
     >
       <div className="flex h-14 items-center gap-2 px-3 md:px-4">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-lg overflow-hidden bg-[var(--sidebar-primary)] md:size-10">
+        <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden md:size-10">
           <AgileLogo size="sm" className="size-5 md:size-6" />
         </div>
         <div className="hidden flex-1 md:block">

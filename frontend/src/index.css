@@ -157,6 +157,23 @@
     padding-top: var(--page-padding);
     padding-bottom: var(--page-padding);
   }
+  .page-container--compact {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  @media (min-width: 768px) {
+    .page-container--compact {
+      padding-left: 1.25rem;
+      padding-right: 1.25rem;
+    }
+  }
+  .page-container--compact [data-slot="card-content"],
+  .page-container--compact [data-slot="card-header"] {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
   .section-gap {
     gap: var(--section-gap);
   }

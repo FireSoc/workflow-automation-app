@@ -10,52 +10,52 @@ const EVENT_CONFIG: Record<
   email_sent: {
     label: 'Email Sent',
     icon: <Mail className="h-4 w-4" />,
-    rowCls: 'bg-white',
-    iconCls: 'text-blue-500 bg-blue-50',
+    rowCls: 'bg-card',
+    iconCls: 'text-primary bg-primary/10',
   },
   awaiting_reply: {
     label: 'Awaiting Reply',
     icon: <Clock className="h-4 w-4" />,
-    rowCls: 'bg-amber-50/40',
-    iconCls: 'text-amber-500 bg-amber-50',
+    rowCls: 'bg-muted/40',
+    iconCls: 'text-muted-foreground bg-muted',
   },
   reminder_sent: {
     label: 'Reminder Sent',
     icon: <Bell className="h-4 w-4" />,
-    rowCls: 'bg-white',
-    iconCls: 'text-purple-500 bg-purple-50',
+    rowCls: 'bg-card',
+    iconCls: 'text-primary bg-primary/10',
   },
   reply_received: {
     label: 'Reply Received',
     icon: <MailOpen className="h-4 w-4" />,
-    rowCls: 'bg-emerald-50/40',
-    iconCls: 'text-emerald-500 bg-emerald-50',
+    rowCls: 'bg-muted/40',
+    iconCls: 'text-foreground bg-muted',
   },
   deadline_warning: {
     label: 'Deadline Warning',
     icon: <AlertTriangle className="h-4 w-4" />,
-    rowCls: 'bg-amber-50/60',
-    iconCls: 'text-amber-600 bg-amber-100',
+    rowCls: 'bg-destructive/5 border-l-2 border-l-destructive/50',
+    iconCls: 'text-destructive bg-destructive/10',
   },
   deadline_missed: {
     label: 'Deadline Missed',
     icon: <XCircle className="h-4 w-4" />,
-    rowCls: 'bg-red-50',
-    iconCls: 'text-red-600 bg-red-100',
+    rowCls: 'bg-destructive/5 border-l-2 border-l-destructive/50',
+    iconCls: 'text-destructive bg-destructive/10',
   },
 };
 
 const BAND_COLORS: Record<RiskBand, string> = {
-  Low: 'bg-emerald-100 text-emerald-700',
-  Moderate: 'bg-yellow-100 text-yellow-700',
-  Elevated: 'bg-amber-100 text-amber-700',
-  Critical: 'bg-red-100 text-red-700',
+  Low: 'bg-muted text-muted-foreground',
+  Moderate: 'bg-muted text-foreground',
+  Elevated: 'bg-destructive/10 text-destructive',
+  Critical: 'bg-destructive/15 text-destructive',
 };
 
 function MessageRow({ msg }: { msg: VirtualInboxMessage }) {
   const cfg = EVENT_CONFIG[msg.event_type] ?? EVENT_CONFIG.email_sent;
   return (
-    <div className={`flex gap-3 px-4 py-3 border-b border-border last:border-0 ${cfg.rowCls}`}>
+    <div className={`flex gap-3 px-3 py-3 border-b border-border last:border-0 ${cfg.rowCls}`}>
       <div className={`flex-shrink-0 h-7 w-7 rounded-full flex items-center justify-center ${cfg.iconCls}`}>
         {cfg.icon}
       </div>
@@ -87,13 +87,13 @@ function InboxColumn({
 }) {
   return (
     <div className="flex-1 min-w-0">
-      <div className="px-4 py-3 border-b border-border bg-muted/50 rounded-t-lg">
+      <div className="px-3 py-3 border-b border-border bg-muted/50 rounded-t-lg">
         <p className="text-xs font-semibold text-foreground uppercase tracking-wide">{label}</p>
         <p className="text-xs text-muted-foreground mt-0.5">{messages.length} message(s)</p>
       </div>
-      <div className="rounded-b-lg border border-border border-t-0 overflow-hidden max-h-96 overflow-y-auto">
+      <div className="rounded-b-lg border border-border border-t-0 bg-card overflow-hidden max-h-96 overflow-y-auto">
         {messages.length === 0 ? (
-          <p className="px-4 py-6 text-center text-sm text-muted-foreground">{emptyText}</p>
+          <p className="px-3 py-6 text-center text-sm text-muted-foreground">{emptyText}</p>
         ) : (
           messages.map((msg, i) => <MessageRow key={i} msg={msg} />)
         )}
@@ -114,7 +114,7 @@ export function InboxPreview({ inbox }: Props) {
       </h3>
       <p className="text-xs text-muted-foreground mb-4">
         Simulated email exchange derived from your task timings and assumptions. Messages are ordered
-        chronologically by projected calendar day.
+        chronologically by projected calendar day. This is a projection, not real email.
       </p>
       <div className="flex gap-4 flex-col sm:flex-row">
         <InboxColumn

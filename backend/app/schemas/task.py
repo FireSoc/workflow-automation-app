@@ -5,6 +5,18 @@ from pydantic import BaseModel, ConfigDict
 from app.models.enums import OnboardingStage, TaskStatus
 
 
+class TaskCreate(BaseModel):
+    """Payload for creating a task manually on a project."""
+
+    title: str
+    stage: OnboardingStage
+    description: str | None = None
+    due_date: datetime | None = None
+    required_for_stage_completion: bool = True
+    is_customer_required: bool = False
+    requires_setup_data: bool = False
+
+
 class TaskRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
