@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Play, GitCompare, ChevronDown, ChevronUp, AlertCircle } from 'lucide-react';
+import { Play, GitCompare, ChevronDown, ChevronUp, AlertCircle, Sparkles } from 'lucide-react';
 import { simulationsApi } from '../api/simulations';
 import { projectsApi } from '../api/projects';
+import { aiApi } from '../api/ai';
 import { SimulationResultPanel } from '../components/ui/SimulationResultPanel';
 import { InboxPreview } from '../components/ui/InboxPreview';
 import { BranchComparePanel } from '../components/ui/BranchComparePanel';
@@ -17,6 +18,7 @@ import type {
   SimulationAssumptions,
   SimulationResponse,
   SimulationCompareResponse,
+  SimulationRecommendationsResponse,
 } from '../types';
 import { ApiError } from '../api/client';
 
@@ -120,12 +122,19 @@ export function Simulator() {
     queryFn: () => projectsApi.list(),
   });
 
+  const [singleResult, setSingleResult] = useState<SimulationResponse | null>(null);
+  const [compareResult, setCompareResult] = useState<SimulationCompareResponse | null>(null);
+  const [aiRecommendations, setAiRecommendations] = useState<SimulationRecommendationsResponse | null>(null);
+  const [aiQuery, setAiQuery] = useState('');
+
   const singleMutation = useMutation({
     mutationFn: (pid: number) =>
       simulationsApi.runFromProject(pid, assumptions),
     onSuccess: (data) => {
       setSingleResult(data);
       setCompareResult(null);
+      setAiRecommendations(null);
+      aiRecMutation.mutate({ result: data });
     },
   });
 
@@ -147,11 +156,16 @@ export function Simulator() {
     onSuccess: (data) => {
       setCompareResult(data);
       setSingleResult(null);
+      setAiRecommendations(null);
+      aiRecMutation.mutate({ result: data });
     },
   });
 
-  const [singleResult, setSingleResult] = useState<SimulationResponse | null>(null);
-  const [compareResult, setCompareResult] = useState<SimulationCompareResponse | null>(null);
+  const aiRecMutation = useMutation({
+    mutationFn: (payload: { result: SimulationResponse | SimulationCompareResponse; query?: string }) =>
+      aiApi.getSimulationRecommendations(payload),
+    onSuccess: (data) => setAiRecommendations(data),
+  });
 
   const isPending = singleMutation.isPending || compareMutation.isPending;
   const errorMsg =
@@ -271,6 +285,62 @@ export function Simulator() {
           <Section title="Results" defaultOpen>
             <SimulationResultPanel result={singleResult} />
           </Section>
+          <Section
+            title="AI recommendations"
+            subtitle="Recommendations from the simulation (ask more questions below)."
+            defaultOpen
+          >
+            <div className="space-y-4">
+              {aiRecMutation.isPending && !aiRecommendations && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <LoadingSpinner size="sm" />
+                  Loading AI recommendations…
+                </div>
+              )}
+              {aiRecMutation.isError && (
+                <p className="text-sm text-destructive">Could not load recommendations.</p>
+              )}
+              {aiRecommendations?.recommendations?.length > 0 && (
+                <ul className="text-sm text-foreground list-disc list-inside space-y-1">
+                  {aiRecommendations.recommendations.map((rec, i) => (
+                    <li key={i}>{rec}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label htmlFor="ai-query" className="text-xs text-muted-foreground">
+                  Ask a question about this simulation
+                </Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="ai-query"
+                    type="text"
+                    placeholder="e.g. Which branch is safest?"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    className="max-w-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const q = aiQuery.trim();
+                      if (q) aiRecMutation.mutate({ result: singleResult, query: q });
+                    }}
+                    disabled={aiRecMutation.isPending || !aiQuery.trim()}
+                  >
+                    Ask
+                  </Button>
+                </div>
+                {aiRecommendations?.answer != null && aiRecommendations.answer !== '' && (
+                  <p className="text-sm text-foreground mt-2 p-3 rounded-lg bg-muted/50">
+                    {aiRecommendations.answer}
+                  </p>
+                )}
+              </div>
+            </div>
+          </Section>
           {singleResult.inbox_preview && (
             <Section title="Virtual inbox preview" defaultOpen>
               <InboxPreview inbox={singleResult.inbox_preview} />
@@ -283,6 +353,62 @@ export function Simulator() {
         <>
           <Section title="Comparison" defaultOpen>
             <BranchComparePanel compareResult={compareResult} />
+          </Section>
+          <Section
+            title="AI recommendations"
+            subtitle="Recommendations from the comparison (ask more questions below)."
+            defaultOpen
+          >
+            <div className="space-y-4">
+              {aiRecMutation.isPending && !aiRecommendations && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <LoadingSpinner size="sm" />
+                  Loading AI recommendations…
+                </div>
+              )}
+              {aiRecMutation.isError && (
+                <p className="text-sm text-destructive">Could not load recommendations.</p>
+              )}
+              {aiRecommendations?.recommendations?.length > 0 && (
+                <ul className="text-sm text-foreground list-disc list-inside space-y-1">
+                  {aiRecommendations.recommendations.map((rec, i) => (
+                    <li key={i}>{rec}</li>
+                  ))}
+                </ul>
+              )}
+              <div className="space-y-2 pt-2 border-t border-border">
+                <Label htmlFor="ai-query-compare" className="text-xs text-muted-foreground">
+                  Ask a question about this simulation
+                </Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="ai-query-compare"
+                    type="text"
+                    placeholder="e.g. Which branch is safest?"
+                    value={aiQuery}
+                    onChange={(e) => setAiQuery(e.target.value)}
+                    className="max-w-sm"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const q = aiQuery.trim();
+                      if (q) aiRecMutation.mutate({ result: compareResult, query: q });
+                    }}
+                    disabled={aiRecMutation.isPending || !aiQuery.trim()}
+                  >
+                    Ask
+                  </Button>
+                </div>
+                {aiRecommendations?.answer != null && aiRecommendations.answer !== '' && (
+                  <p className="text-sm text-foreground mt-2 p-3 rounded-lg bg-muted/50">
+                    {aiRecommendations.answer}
+                  </p>
+                )}
+              </div>
+            </div>
           </Section>
           <Section
             title="Baseline results"

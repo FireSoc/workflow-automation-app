@@ -14,13 +14,16 @@ from app.schemas.project import (
     RiskCheckResponse,
     RiskRead,
 )
+from app.schemas.ai import RiskSummaryResponse
 from app.schemas.task import TaskRead
 from app.schemas.onboarding_event import OnboardingEventRead
 from app.schemas.recommendation import RecommendationRead
 from app.services.reminder_service import check_overdue_tasks
 from app.services.risk_service import apply_risk_check, recalculate_risk
+from app.services.risk_scoring_service import compute_risk
 from app.services.summary_service import build_summary
 from app.services.workflow_service import advance_stage, create_project
+from app.services.ai_service import generate_project_risk_summary
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -126,8 +129,6 @@ def check_overdue(project_id: int, db: Session = Depends(get_db)) -> OverdueChec
 @router.get("/{project_id}/risk", response_model=RiskRead)
 def get_project_risk(project_id: int, db: Session = Depends(get_db)) -> RiskRead:
     project = _get_project_or_404(db, project_id)
-    from app.services.risk_scoring_service import compute_risk
-
     score, level, explanations = compute_risk(db, project)
     return RiskRead(
         risk_score=score,
@@ -153,6 +154,29 @@ def recalculate_project_risk(project_id: int, db: Session = Depends(get_db)) -> 
 def get_project_summary(project_id: int, db: Session = Depends(get_db)) -> ProjectSummaryResponse:
     project = _get_project_or_404(db, project_id)
     return build_summary(project)
+
+
+@router.get("/{project_id}/risk/ai-summary", response_model=RiskSummaryResponse)
+def get_project_risk_ai_summary(
+    project_id: int, db: Session = Depends(get_db)
+) -> RiskSummaryResponse:
+    """
+    AI-generated short summary for ops from project risk and summary.
+    Always returns 200; uses fallback text if LLM is unavailable.
+    """
+    project = _get_project_or_404(db, project_id)
+    score, level, explanations = compute_risk(db, project)
+    risk = RiskRead(
+        risk_score=score,
+        risk_level=level,
+        risk_flag=project.risk_flag,
+        explanations=explanations,
+    )
+    summary = build_summary(project)
+    risk_summary = generate_project_risk_summary(
+        risk, summary, project_id=project_id
+    )
+    return RiskSummaryResponse(risk_summary=risk_summary)
 
 
 @router.post("/{project_id}/advance-stage", response_model=dict)

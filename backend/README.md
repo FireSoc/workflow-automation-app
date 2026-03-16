@@ -202,6 +202,41 @@ RISK_REQUIRED_OVERDUE_COUNT=2
 
 ---
 
+## AI endpoints (OpenAI gpt-4o-mini)
+
+AI summary and recommendation routes use a shared OpenAI client. Set the API key in the environment (e.g. in `.env`):
+
+```
+OPENAI_API_KEY=sk-...
+```
+
+Optional: `OPENAI_MODEL` (default `gpt-4o-mini`), `OPENAI_TIMEOUT_SECONDS` (default `10.0`).
+
+**Routes:**
+
+| Method | Path | Description |
+|--------|------|--------------|
+| `GET` | `/projects/{id}/risk/ai-summary` | Short AI summary for ops from project risk + summary. Always 200; fallback to `why_risk_elevated` or "Summary unavailable" if LLM fails. |
+| `POST` | `/ai/simulation/recommendations` | Send either a precomputed `result` (SimulationResponse or SimulationCompareResponse) or inputs to run first (`run_simulation` or `run_compare`). Returns `summary` and `recommendations`; optional `query` returns `answer`. Always 200; fallback uses deterministic recommendations from the simulation. |
+
+**Example — risk AI summary:**
+
+```bash
+curl http://127.0.0.1:8000/projects/1/risk/ai-summary
+```
+
+**Example — simulation recommendations (run then summarize):**
+
+```bash
+curl -X POST http://127.0.0.1:8000/ai/simulation/recommendations \
+  -H "Content-Type: application/json" \
+  -d '{"run_simulation":{"customer_type":"smb","tasks":[{"title":"Setup","stage":"kickoff","due_offset_days":5}],"assumptions":{}}}'
+```
+
+These endpoints are intended for internal or authenticated use; do not log full project names or PII in LLM request/response logs.
+
+---
+
 ## Typical test flow
 
 ```bash

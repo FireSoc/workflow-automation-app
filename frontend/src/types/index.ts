@@ -415,6 +415,24 @@ export interface ProjectBaselineResponse {
   tasks: SimulationTaskInput[];
 }
 
+// ─── AI endpoints ─────────────────────────────────────────────────────────────
+
+export interface RiskSummaryResponse {
+  risk_summary: string;
+}
+
+export interface SimulationRecommendationsResponse {
+  summary: string;
+  recommendations: string[];
+  answer?: string | null;
+}
+
+/** Payload for POST /ai/simulation/recommendations when sending a precomputed result. */
+export interface SimulationRecommendationsRequest {
+  result?: SimulationResponse | SimulationCompareResponse;
+  query?: string;
+}
+
 // ─── UI helpers ───────────────────────────────────────────────────────────────
 
 export const STAGE_ORDER: OnboardingStage[] = ['kickoff', 'setup', 'integration', 'training', 'go_live'];

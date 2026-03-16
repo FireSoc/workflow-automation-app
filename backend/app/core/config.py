@@ -17,6 +17,11 @@ class Settings(BaseSettings):
     risk_stalled_threshold_days: int = 7
     risk_required_overdue_count: int = 2
 
+    # OpenAI (AI summary / simulation recommendations)
+    openai_api_key: str | None = None
+    openai_model: str = "gpt-4o-mini"
+    openai_timeout_seconds: float = 10.0
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

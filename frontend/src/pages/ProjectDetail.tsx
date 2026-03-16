@@ -16,8 +16,10 @@ import {
   Target,
   Lightbulb,
   ArrowRightCircle,
+  Sparkles,
 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
+import { aiApi } from '../api/ai';
 import { tasksApi } from '../api/tasks';
 import { customersApi } from '../api/customers';
 import {
@@ -242,6 +244,10 @@ export function ProjectDetail() {
     queryKey: ['project-summary', projectId],
     queryFn: () => projectsApi.getSummary(projectId),
     enabled: !!project && !isNaN(projectId),
+  });
+
+  const riskSummaryMutation = useMutation({
+    mutationFn: () => aiApi.getRiskSummary(projectId),
   });
 
   if (isPending) return <PageLoading />;
@@ -495,6 +501,42 @@ export function ProjectDetail() {
                 </CardContent>
               </Card>
             )}
+
+            <Card aria-labelledby="ai-risk-summary-heading">
+              <CardHeader>
+                <CardTitle id="ai-risk-summary-heading" className="text-sm flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  AI risk summary
+                </CardTitle>
+                <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                  Short, actionable summary for ops (generated on demand).
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => riskSummaryMutation.mutate()}
+                  disabled={riskSummaryMutation.isPending}
+                >
+                  {riskSummaryMutation.isPending ? (
+                    <LoadingSpinner size="sm" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Generate AI summary
+                </Button>
+                {riskSummaryMutation.isError && (
+                  <p className="text-sm text-destructive">Could not load AI summary.</p>
+                )}
+                {riskSummaryMutation.data?.risk_summary && (
+                  <p className="text-sm text-foreground border-t border-border pt-3">
+                    {riskSummaryMutation.data.risk_summary}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
             <div className="flex flex-wrap items-center gap-2">
               <div className="mr-auto flex items-center gap-2 text-sm text-muted-foreground">

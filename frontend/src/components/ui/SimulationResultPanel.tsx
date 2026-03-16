@@ -117,24 +117,6 @@ function TaskList({ assessments }: { assessments: TaskAssessment[] }) {
   );
 }
 
-// ─── Recommendations panel ────────────────────────────────────────────────────
-
-function RecommendationsPanel({ recommendations }: { recommendations: string[] }) {
-  if (recommendations.length === 0) return null;
-  return (
-    <section aria-labelledby="recs-heading">
-      <h3 id="recs-heading" className="text-sm font-semibold text-slate-800 mb-2">
-        Key recommendations
-      </h3>
-      <ul className="list-disc list-inside space-y-1.5 text-sm text-slate-700 bg-white rounded-lg border border-slate-200 px-4 py-3">
-        {recommendations.map((rec, i) => (
-          <li key={i}>{rec}</li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 // ─── Main result panel ────────────────────────────────────────────────────────
 
 interface Props {
@@ -150,8 +132,6 @@ export function SimulationResultPanel({ result }: Props) {
           <TaskList assessments={result.task_assessments} />
         </>
       )}
-
-      <RecommendationsPanel recommendations={result.recommendations} />
     </div>
   );
 }
