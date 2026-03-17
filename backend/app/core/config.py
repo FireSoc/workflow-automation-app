@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     # Local dev default; set DATABASE_URL in production.
     database_url: str = "postgresql://agile:agile@localhost:5432/agile"
 
+    # CORS allowed origins (comma-separated). Set CORS_ORIGINS in production (e.g. Vercel URL).
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+
     # Risk detection thresholds
     risk_overdue_threshold_days: int = 3
     risk_stalled_threshold_days: int = 7

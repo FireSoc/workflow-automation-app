@@ -26,13 +26,16 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    @app.get("/")
+    def health():
+        """Root health check for deployment (e.g. Render)."""
+        return {"status": "ok"}
+
     # Explicit origins so browser allows credentials; "*" + credentials is rejected by CORS.
+    origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-        ],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
