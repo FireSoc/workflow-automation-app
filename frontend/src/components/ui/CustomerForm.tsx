@@ -6,6 +6,13 @@ import { LoadingSpinner } from './LoadingSpinner';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface CustomerFormProps {
@@ -74,16 +81,19 @@ export function CustomerForm({ onSuccess, onCancel }: CustomerFormProps) {
         <Label htmlFor="customer_type">
           Customer Type <span className="text-destructive">*</span>
         </Label>
-        <select
-          id="customer_type"
-          className={selectClass}
+        <Select
           value={form.customer_type}
-          onChange={(e) => setForm((f) => ({ ...f, customer_type: e.target.value as CustomerType }))}
+          onValueChange={(v) => setForm((f) => ({ ...f, customer_type: v as CustomerType }))}
         >
-          <option value="smb">SMB</option>
-          <option value="mid_market">Mid-Market</option>
-          <option value="enterprise">Enterprise</option>
-        </select>
+          <SelectTrigger id="customer_type" className={selectClass}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="smb">SMB</SelectItem>
+            <SelectItem value="mid_market">Mid-Market</SelectItem>
+            <SelectItem value="enterprise">Enterprise</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">

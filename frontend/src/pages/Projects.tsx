@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, AlertTriangle, FolderKanban, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Plus, FolderKanban, ExternalLink, MoreHorizontal, Trash2 } from 'lucide-react';
 import { projectsApi } from '../api/projects';
 import { customersApi } from '../api/customers';
 import { ProjectStatusBadge, StageBadge, CustomerTypeBadge } from '../components/ui/StatusBadge';
+import { RiskScoreBadge } from '@/components/ui/RiskScoreBadge';
 import { ProjectForm } from '../components/ui/ProjectForm';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { FilterBar } from '@/components/ui/FilterBar';
@@ -30,7 +31,13 @@ import { PageLoading } from '@/components/ui/LoadingSpinner';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 export function Projects() {
   const [isModalOpen, setModalOpen] = useState(false);
@@ -108,7 +115,7 @@ export function Projects() {
           ? 'At-risk projects'
           : 'All Projects';
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayout({
       title: 'Projects',
       subtitle: 'Browse and filter onboarding projects.',
@@ -125,42 +132,52 @@ export function Projects() {
     <PageContainer className="flex flex-col gap-6">
       {!loadingProjects && !isError && (projects?.length ?? 0) > 0 && (
         <FilterBar>
-          <select
-            id="filter-company"
+          <Select
             value={companyId ?? ''}
-            onChange={(e) => setCompany(e.target.value)}
-            aria-label="Filter by company"
-            className={cn(
-              'flex h-8 w-48 rounded-lg border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-            )}
+            onValueChange={(v) => setCompany(v ?? '')}
           >
-            <option value="">All companies</option>
-            {(customers ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.company_name}
-              </option>
-            ))}
-          </select>
-          <select
-            id="filter-project"
+            <SelectTrigger
+              id="filter-company"
+              size="sm"
+              className="w-48"
+              aria-label="Filter by company"
+            >
+              <SelectValue placeholder="All companies" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All companies</SelectItem>
+              {(customers ?? []).map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.company_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
             value={projectId ?? ''}
-            onChange={(e) => setProject(e.target.value)}
-            aria-label="Filter by project"
-            disabled={projectsForProjectDropdown.length === 0}
-            className={cn(
-              'flex h-8 w-56 rounded-lg border border-input bg-background px-3 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50'
-            )}
+            onValueChange={(v) => setProject(v ?? '')}
           >
-            <option value="">All projects</option>
-            {projectsForProjectDropdown.map((p) => {
-              const customer = customerMap.get(p.customer_id);
-              return (
-                <option key={p.id} value={p.id}>
-                  {customer?.company_name ?? `Customer #${p.customer_id}`} — #{p.id}
-                </option>
-              );
-            })}
-          </select>
+            <SelectTrigger
+              id="filter-project"
+              size="sm"
+              className="w-56"
+              aria-label="Filter by project"
+              disabled={projectsForProjectDropdown.length === 0}
+            >
+              <SelectValue placeholder="All projects" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All projects</SelectItem>
+              {projectsForProjectDropdown.map((p) => {
+                const customer = customerMap.get(p.customer_id);
+                return (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {customer?.company_name ?? `Customer #${p.customer_id}`} — #{p.id}
+                  </SelectItem>
+                );
+              })}
+            </SelectContent>
+          </Select>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
@@ -186,13 +203,21 @@ export function Projects() {
       {!loadingProjects && !isError && (filteredProjects?.length ?? 0) === 0 && (
         <EmptyState
           title="No projects yet"
-          description="Create a new onboarding project for a customer to get started."
+          description="Create a new onboarding project for a customer or import a deal from your CRM."
           icon={<FolderKanban className="h-12 w-12 text-muted-foreground" />}
           action={
-            <Button onClick={() => setModalOpen(true)}>
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button onClick={() => setModalOpen(true)}>
+                <Plus className="h-4 w-4" />
+                New project
+              </Button>
+              <Link
+                to="/deals/import"
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Import a deal
+              </Link>
+            </div>
           }
         />
       )}
@@ -232,10 +257,14 @@ export function Projects() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                displayedProjects.map((project) => {
+                displayedProjects.map((project, index) => {
                   const customer = customerMap.get(project.customer_id);
                   return (
-                    <TableRow key={project.id}>
+                    <TableRow
+                      key={project.id}
+                      className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200"
+                      style={{ animationDelay: `${Math.min(index * 40, 280)}ms` }}
+                    >
                       <TableCell className="px-5 py-3.5">
                         <div>
                           <p className="font-medium text-foreground">
@@ -255,14 +284,10 @@ export function Projects() {
                         <ProjectStatusBadge status={project.status} />
                       </TableCell>
                       <TableCell className="px-5 py-3.5">
-                        {project.risk_flag ? (
-                          <div className="flex items-center gap-1 text-destructive text-xs font-medium">
-                            <AlertTriangle className="h-3.5 w-3.5" />
-                            At Risk
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
+                        <RiskScoreBadge
+                          score={project.risk_score ?? null}
+                          level={project.risk_level ?? undefined}
+                        />
                       </TableCell>
                       <TableCell className="px-5 py-3.5 text-muted-foreground">
                         {new Date(project.updated_at).toLocaleDateString('en-US', {

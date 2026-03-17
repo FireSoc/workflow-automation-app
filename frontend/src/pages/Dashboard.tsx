@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import {
@@ -33,6 +33,7 @@ import { cn } from '@/lib/utils';
 import { PageLoading } from '@/components/ui/LoadingSpinner';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
 import { EventFeed } from '@/components/ui/EventFeed';
+import { RiskScoreBadge } from '@/components/ui/RiskScoreBadge';
 import { STAGE_LABELS, type Project, type Task, type OnboardingEvent, type ProjectDetail } from '../types';
 
 const DASHBOARD_PROJECT_LIMIT = 10;
@@ -173,7 +174,7 @@ export function Dashboard() {
     );
   }, [projectDetails]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayout({
       title: 'Overview',
       subtitle: 'Onboarding operations at a glance',
@@ -217,27 +218,25 @@ export function Dashboard() {
         <h2 id="kpi-heading" className="sr-only">
           North star metrics
         </h2>
-        <KpiCard
-          label="Projects"
-          value={`${completedProjects}/${totalProjects}`}
-          icon={<FolderKanban className="size-5 text-muted-foreground" />}
-        />
-        <KpiCard
-          label="Tasks"
-          value={`${completedTasks}/${totalTasks}`}
-          icon={<LayoutGrid className="size-5 text-muted-foreground" />}
-        />
-        <KpiCard
-          label="At risk"
-          value={atRiskProjects}
-          icon={<AlertTriangle className="size-5 text-destructive" />}
-          iconClassName="bg-destructive/10"
-        />
-        <KpiCard
-          label="Recommendations"
-          value={totalRecommendations}
-          icon={<Lightbulb className="size-5 text-muted-foreground" />}
-        />
+        {[
+          { label: 'Projects', value: `${completedProjects}/${totalProjects}`, icon: <FolderKanban className="size-5 text-muted-foreground" />, iconClassName: undefined },
+          { label: 'Tasks', value: `${completedTasks}/${totalTasks}`, icon: <LayoutGrid className="size-5 text-muted-foreground" />, iconClassName: undefined },
+          { label: 'At risk', value: atRiskProjects, icon: <AlertTriangle className="size-5 text-destructive" />, iconClassName: 'bg-destructive/10' },
+          { label: 'Recommendations', value: totalRecommendations, icon: <Lightbulb className="size-5 text-muted-foreground" />, iconClassName: undefined },
+        ].map((kpi, i) => (
+          <div
+            key={kpi.label}
+            className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200"
+            style={{ animationDelay: `${i * 50}ms` }}
+          >
+            <KpiCard
+              label={kpi.label}
+              value={kpi.value}
+              icon={kpi.icon}
+              iconClassName={kpi.iconClassName}
+            />
+          </div>
+        ))}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -274,8 +273,12 @@ export function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orderedTasksForActions.slice(0, 8).map((task) => (
-                    <TableRow key={`${task.project_id}-${task.id}`}>
+                  {orderedTasksForActions.slice(0, 8).map((task, index) => (
+                    <TableRow
+                      key={`${task.project_id}-${task.id}`}
+                      className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200"
+                      style={{ animationDelay: `${Math.min(index * 40, 280)}ms` }}
+                    >
                       <TableCell className="font-medium">{task.title}</TableCell>
                       <TableCell>{STAGE_LABELS[task.stage]}</TableCell>
                       <TableCell>
@@ -303,7 +306,9 @@ export function Dashboard() {
             <CardContent className="p-0">
               {!projects?.length ? (
                 <div className="px-3 py-6 text-center text-sm text-muted-foreground">
-                  No projects. <Link to="/projects" className="text-primary hover:underline">Create one</Link>.
+                  No projects. <Link to="/projects" className="text-primary hover:underline">Create one</Link>
+                  {' or '}
+                  <Link to="/deals/import" className="text-primary hover:underline">Import a deal</Link>.
                 </div>
               ) : (
                 <Table>
@@ -311,18 +316,23 @@ export function Dashboard() {
                     <TableRow>
                       <TableHead>Project</TableHead>
                       <TableHead>Progress</TableHead>
+                      <TableHead>Risk</TableHead>
                       <TableHead>End date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {(projects ?? []).map((project: Project) => {
+                    {(projects ?? []).map((project: Project, index: number) => {
                       const customer = customers?.find((c) => c.id === project.customer_id);
                       const name = project.name ?? customer?.company_name ?? `Project #${project.id}`;
                       const prog = projectProgress[project.id];
                       const pct = prog && prog.total > 0 ? Math.round((prog.completed / prog.total) * 100) : 0;
                       const endDate = project.target_go_live_date ?? project.projected_go_live_date;
                       return (
-                        <TableRow key={project.id}>
+                        <TableRow
+                          key={project.id}
+                          className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200"
+                          style={{ animationDelay: `${Math.min(index * 40, 200)}ms` }}
+                        >
                           <TableCell className="font-medium">
                             <Link to={`/projects/${project.id}`} className="text-primary hover:underline">
                               {name}
@@ -333,6 +343,12 @@ export function Dashboard() {
                               <Progress value={pct} className="h-2 flex-1" />
                               <span className="text-xs tabular-nums">{pct}%</span>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            <RiskScoreBadge
+                              score={project.risk_score ?? null}
+                              level={project.risk_level ?? undefined}
+                            />
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {endDate ? new Date(endDate).toLocaleDateString('en-US') : '—'}

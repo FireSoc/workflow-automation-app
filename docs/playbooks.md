@@ -1,6 +1,6 @@
 # Playbook schema and usage
 
-Playbooks are segment-scoped onboarding blueprints. They define **default stages** and **default tasks** (task templates) used to generate onboarding projects when a deal is ingested or a project is created manually. Playbooks are **created only via the seed script** (`backend/scripts/seed_playbooks.py`); there is no public API to create playbooks.
+Playbooks are segment-scoped onboarding blueprints. They define **default stages** and **default tasks** (task templates) used to generate onboarding projects when a deal is ingested or a project is created manually. Playbooks are **seeded automatically on backend startup** so all users have access; they can also be seeded manually via `backend/scripts/seed_playbooks.py`. There is no public API to create playbooks.
 
 ## Purpose
 

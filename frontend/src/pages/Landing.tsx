@@ -498,13 +498,13 @@ export function Landing() {
 
           <div className="flex items-center gap-2">
             <Link
-              to="/dashboard"
+              to="/login"
               className="rounded-md px-3 py-1.5 text-sm text-white/70 transition-colors hover:text-white"
             >
               Log in
             </Link>
             <Link
-              to="/dashboard"
+              to="/signup"
               className="rounded-full bg-white px-4 py-1.5 text-sm font-semibold text-indigo-900 transition-colors hover:bg-white/90"
             >
               Get started
@@ -532,17 +532,17 @@ export function Landing() {
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
-                to="/dashboard"
+                to="/signup"
                 className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-2.5 text-sm font-semibold text-indigo-900 shadow transition-colors hover:bg-white/90"
               >
-                Open dashboard
+                Get started free
                 <ArrowRight className="size-4" aria-hidden />
               </Link>
               <Link
-                to="/simulator"
+                to="/login"
                 className="inline-flex items-center gap-2 rounded-full border border-white/30 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
               >
-                View simulator
+                Sign in
               </Link>
             </div>
           </div>
@@ -651,10 +651,10 @@ export function Landing() {
 
                 <div className="mt-8">
                   <Link
-                    to="/dashboard"
+                    to="/signup"
                     className={cn(buttonVariants(), 'inline-flex items-center gap-2')}
                   >
-                    Enter the app
+                    Get started free
                     <ArrowRight className="size-4" aria-hidden />
                   </Link>
                 </div>

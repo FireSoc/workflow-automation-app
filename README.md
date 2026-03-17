@@ -33,7 +33,7 @@ alembic upgrade head      # create tables
 uvicorn app.main:app --reload
 ```
 
-- API: **http://127.0.0.1:8000**  
+On startup, the backend seeds default playbooks automatically so all users have access. API: **http://127.0.0.1:8000**  
 - Docs: **http://127.0.0.1:8000/docs**
 
 ### 2. Frontend

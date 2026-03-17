@@ -9,6 +9,13 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 
 interface ProjectFormProps {
@@ -70,21 +77,27 @@ export function ProjectForm({ preselectedCustomerId, onSuccess, onCancel }: Proj
             <LoadingSpinner size="sm" /> Loading customers…
           </div>
         ) : (
-          <select
-            id="customer_id"
-            className={selectClass}
-            value={form.customer_id}
-            onChange={(e) => setForm((f) => ({ ...f, customer_id: Number(e.target.value) }))}
-            aria-invalid={!!errors.customer_id}
-            aria-describedby={errors.customer_id ? 'customer-error' : undefined}
+          <Select
+            value={String(form.customer_id)}
+            onValueChange={(v) => setForm((f) => ({ ...f, customer_id: Number(v) }))}
           >
-            <option value={0}>Select a customer…</option>
-            {customers?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.company_name} ({c.customer_type.toUpperCase()})
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="customer_id"
+              className={selectClass}
+              aria-invalid={!!errors.customer_id}
+              aria-describedby={errors.customer_id ? 'customer-error' : undefined}
+            >
+              <SelectValue placeholder="Select a customer…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">Select a customer…</SelectItem>
+              {customers?.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.company_name} ({c.customer_type.toUpperCase()})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
         {errors.customer_id && (
           <p id="customer-error" role="alert" className="text-xs text-destructive">

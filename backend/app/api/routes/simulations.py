@@ -20,10 +20,14 @@ POST /simulations/risk/compare
     risk significantly compared to our baseline?"
 """
 
+import uuid
+
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
+from app.core.auth import get_current_user
+from app.models.customer import Customer
 from app.models.onboarding_project import OnboardingProject
 from app.schemas.simulation import (
     ProjectBaselineResponse,
@@ -85,6 +89,7 @@ def simulate_risk(payload: SimulationRequest) -> SimulationResponse:
 def get_project_baseline_endpoint(
     project_id: int,
     db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ) -> ProjectBaselineResponse:
     """
     Returns the project's customer_type and its tasks as SimulationTaskInput list.
@@ -92,11 +97,12 @@ def get_project_baseline_endpoint(
     """
     project = (
         db.query(OnboardingProject)
+        .join(Customer, OnboardingProject.customer_id == Customer.id)
         .options(
             selectinload(OnboardingProject.tasks),
             selectinload(OnboardingProject.customer),
         )
-        .filter(OnboardingProject.id == project_id)
+        .filter(OnboardingProject.id == project_id, Customer.owner_id == current_user)
         .first()
     )
     if project is None:
@@ -117,6 +123,7 @@ def simulate_risk_from_project(
     project_id: int,
     assumptions: SimulationAssumptions = Body(default_factory=SimulationAssumptions),
     db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ) -> SimulationResponse:
     """
     Loads the project and all its tasks from the database, then runs the
@@ -130,11 +137,12 @@ def simulate_risk_from_project(
     """
     project = (
         db.query(OnboardingProject)
+        .join(Customer, OnboardingProject.customer_id == Customer.id)
         .options(
             selectinload(OnboardingProject.tasks),
             selectinload(OnboardingProject.customer),
         )
-        .filter(OnboardingProject.id == project_id)
+        .filter(OnboardingProject.id == project_id, Customer.owner_id == current_user)
         .first()
     )
 

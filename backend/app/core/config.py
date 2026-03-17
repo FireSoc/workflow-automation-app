@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     openai_model: str = "gpt-4o-mini"
     openai_timeout_seconds: float = 10.0
 
+    # Supabase JWT secret (Supabase Dashboard → Settings → API → JWT Secret).
+    # Used to verify tokens sent by the frontend. Leave empty to disable auth enforcement.
+    supabase_jwt_secret: str | None = None
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

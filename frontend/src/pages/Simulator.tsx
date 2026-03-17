@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
@@ -18,6 +18,13 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { simulationsApi } from '../api/simulations';
 import { projectsApi } from '../api/projects';
 import { aiApi } from '../api/ai';
@@ -34,7 +41,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePageLayout } from '@/contexts/PageLayoutContext';
-import { cn } from '@/lib/utils';
 import type {
   SimulationAssumptions,
   SimulationResponse,
@@ -412,7 +418,7 @@ export function Simulator() {
     ? 'What should I do first to reduce risk?'
     : undefined;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayout({
       title: 'Simulator',
       subtitle: 'Test timeline risk, see downstream impact, and review AI recommendations.',
@@ -480,24 +486,26 @@ export function Simulator() {
               {projectsLoading ? (
                 <LoadingSpinner size="sm" />
               ) : (
-                <select
-                  id="sim-project"
-                  value={projectId ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    handleProjectChange(v === '' ? null : Number(v));
-                  }}
-                  className={cn(
-                    'flex h-8 w-full min-w-[140px] max-w-[200px] rounded-md border border-input bg-background px-2.5 py-1.5 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
-                  )}
+                <Select
+                  value={projectId != null ? String(projectId) : ''}
+                  onValueChange={(v) => handleProjectChange(v === '' ? null : Number(v))}
                 >
-                  <option value="">— Select —</option>
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name ?? `#${p.id}`}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id="sim-project"
+                    size="sm"
+                    className="min-w-[140px] max-w-[200px] w-full"
+                  >
+                    <SelectValue placeholder="— Select —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">— Select —</SelectItem>
+                    {projects.map((p) => (
+                      <SelectItem key={p.id} value={String(p.id)}>
+                        {p.name ?? `#${p.id}`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
             </div>
 
@@ -579,7 +587,7 @@ export function Simulator() {
         </CardContent>
       </Card>
 
-      <div className="min-w-0 space-y-6">
+      <div key={tab} className="min-w-0 space-y-6 animate-in fade-in-0 duration-150">
           {/* Part 4: Better empty state */}
           {!canRun && (
             <div className="rounded-lg border border-border bg-muted/20 px-4 py-5 space-y-2">
@@ -591,12 +599,20 @@ export function Simulator() {
                 delay assumptions. Use <strong className="text-foreground font-medium">Compare</strong> to
                 test scenarios side-by-side and find the safest path to go-live.
               </p>
-              <Link
-                to="/projects/list"
-                className="inline-block text-xs text-primary underline-offset-4 hover:underline mt-1"
-              >
-                View all projects →
-              </Link>
+              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                <Link
+                  to="/projects/list"
+                  className="text-xs text-primary underline-offset-4 hover:underline"
+                >
+                  View all projects →
+                </Link>
+                <Link
+                  to="/deals/import"
+                  className="text-xs text-primary underline-offset-4 hover:underline"
+                >
+                  Create a project from Import deal →
+                </Link>
+              </div>
             </div>
           )}
 

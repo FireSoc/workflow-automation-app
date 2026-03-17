@@ -1,6 +1,7 @@
+import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, JSON, String, Text
+from sqlalchemy import DateTime, Enum, JSON, String, Text, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,6 +14,7 @@ class Customer(Base):
     __tablename__ = "customers"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     customer_type: Mapped[CustomerType] = mapped_column(
         Enum(CustomerType, values_callable=lambda x: [e.value for e in x]),

@@ -1,9 +1,26 @@
-"""Internal playbook creation for seed scripts only. Not exposed via API."""
+"""Internal playbook creation for seed scripts and startup seeding. Not exposed via API."""
 
 from sqlalchemy.orm import Session
 
+from app.data.playbook_seed_data import PLAYBOOKS
 from app.models.onboarding_playbook import OnboardingPlaybook
 from app.schemas.playbook import PlaybookCreate
+
+
+def ensure_playbooks_seeded(db: Session) -> None:
+    """
+    Create each default playbook by name only if it does not already exist.
+    Idempotent; safe to call on every backend startup.
+    """
+    for payload in PLAYBOOKS:
+        existing = (
+            db.query(OnboardingPlaybook)
+            .filter(OnboardingPlaybook.name == payload.name)
+            .first()
+        )
+        if existing:
+            continue
+        create_playbook_from_payload(db, payload)
 
 
 def create_playbook_from_payload(

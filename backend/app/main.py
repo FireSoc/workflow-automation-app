@@ -5,12 +5,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import accounts, ai, crm, customer_portal, customers, playbooks, projects, simulations, tasks
 from app.core.config import settings
-from app.db.session import init_db
+from app.db.session import SessionLocal, init_db
+from app.services.playbook_seed_service import ensure_playbooks_seeded
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    db = SessionLocal()
+    try:
+        ensure_playbooks_seeded(db)
+    finally:
+        db.close()
     yield
 
 

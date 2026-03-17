@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Building2, ArrowRight, MoreHorizontal, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -64,7 +64,7 @@ export function Customers() {
     return forCustomer[0]?.id ?? null;
   }
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayout({
       title: 'Customers',
       subtitle: 'Manage customer accounts and link to onboarding projects.',

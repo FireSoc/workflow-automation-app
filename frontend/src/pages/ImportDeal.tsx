@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useLayoutEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { crmApi } from '../api/crm';
@@ -12,6 +12,13 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 import { ErrorAlert } from '@/components/ui/ErrorAlert';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import type { DealIngestPayload, CustomerType } from '../types';
 
@@ -95,7 +102,7 @@ export function ImportDeal() {
     'flex h-9 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayout({
       title: 'Import deal',
       subtitle: 'Create an onboarding project from a closed-won deal.',
@@ -164,18 +171,21 @@ export function ImportDeal() {
 
             <div className="space-y-2">
               <Label htmlFor="segment">Segment</Label>
-              <select
-                id="segment"
+              <Select
                 value={form.segment}
-                onChange={(e) => setForm((f) => ({ ...f, segment: e.target.value as CustomerType }))}
-                className={inputClass}
+                onValueChange={(v) => setForm((f) => ({ ...f, segment: v as CustomerType }))}
               >
-                {SEGMENTS.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id="segment" className={inputClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEGMENTS.map(({ value, label }) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

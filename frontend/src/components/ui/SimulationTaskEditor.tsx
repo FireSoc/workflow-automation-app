@@ -1,5 +1,12 @@
 import { Trash2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { SimulationTaskInput, OnboardingStage } from '../../types';
 
 const STAGES: OnboardingStage[] = ['kickoff', 'setup', 'integration', 'training', 'go_live'];
@@ -87,16 +94,25 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                   />
                 </td>
                 <td className="px-2 py-2">
-                  <select
-                    className="input-legacy text-xs py-1 h-7 pr-8 bg-no-repeat bg-[length:1rem] bg-[right_0.25rem_center]"
+                  <Select
                     value={task.stage}
-                    onChange={(e) => update(i, { stage: e.target.value as OnboardingStage })}
-                    aria-label={`Task ${i + 1} stage`}
+                    onValueChange={(v) => update(i, { stage: v as OnboardingStage })}
                   >
-                    {STAGES.map((s) => (
-                      <option key={s} value={s}>{STAGE_LABELS[s]}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      size="sm"
+                      className="input-legacy text-xs h-7 min-w-0"
+                      aria-label={`Task ${i + 1} stage`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAGES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {STAGE_LABELS[s]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </td>
                 <td className="px-2 py-2">
                   <input
@@ -119,17 +135,24 @@ export function SimulationTaskEditor({ tasks, onChange }: Props) {
                   />
                 </td>
                 <td className="px-2 py-2">
-                  <select
-                    className="input-legacy text-xs py-1 w-24 h-7 pr-8"
-                    value={task.criticality ?? 2}
-                    onChange={(e) => update(i, { criticality: Number(e.target.value) })}
-                    aria-label={`Task ${i + 1} criticality`}
+                  <Select
+                    value={String(task.criticality ?? 2)}
+                    onValueChange={(v) => update(i, { criticality: Number(v) })}
                   >
-                    <option value={1}>1 — Nice to have</option>
-                    <option value={2}>2 — Important</option>
-                    <option value={3}>3 — High impact</option>
-                    <option value={4}>4 — Mission critical</option>
-                  </select>
+                    <SelectTrigger
+                      size="sm"
+                      className="input-legacy text-xs w-24 h-7 min-w-0"
+                      aria-label={`Task ${i + 1} criticality`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 — Nice to have</SelectItem>
+                      <SelectItem value="2">2 — Important</SelectItem>
+                      <SelectItem value="3">3 — High impact</SelectItem>
+                      <SelectItem value="4">4 — Mission critical</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </td>
                 <td className="px-2 py-2">
                   <input

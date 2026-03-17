@@ -1,6 +1,7 @@
+import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, ForeignKey, JSON, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, JSON, String, Text, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -13,6 +14,7 @@ class CRMDeal(Base):
     __tablename__ = "crm_deals"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    owner_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
     crm_source: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     segment: Mapped[CustomerType] = mapped_column(

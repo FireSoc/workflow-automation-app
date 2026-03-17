@@ -1,7 +1,10 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
+from app.core.auth import get_current_user
 from app.models.customer import Customer
 from app.models.onboarding_project import OnboardingProject
 from app.models.task import Task
@@ -30,9 +33,12 @@ from app.services.ai_service import generate_project_risk_summary
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
-def _get_project_or_404(db: Session, project_id: int) -> OnboardingProject:
+def _get_project_or_404(
+    db: Session, project_id: int, owner_id: uuid.UUID
+) -> OnboardingProject:
     project = (
         db.query(OnboardingProject)
+        .join(Customer, OnboardingProject.customer_id == Customer.id)
         .options(
             selectinload(OnboardingProject.tasks),
             selectinload(OnboardingProject.events),
@@ -40,7 +46,7 @@ def _get_project_or_404(db: Session, project_id: int) -> OnboardingProject:
             selectinload(OnboardingProject.risk_signals),
             selectinload(OnboardingProject.recommendations),
         )
-        .filter(OnboardingProject.id == project_id)
+        .filter(OnboardingProject.id == project_id, Customer.owner_id == owner_id)
         .first()
     )
     if not project:
@@ -52,9 +58,15 @@ def _get_project_or_404(db: Session, project_id: int) -> OnboardingProject:
 
 @router.post("", response_model=ProjectRead, status_code=status.HTTP_201_CREATED)
 def create_onboarding_project(
-    payload: ProjectCreate, db: Session = Depends(get_db)
+    payload: ProjectCreate,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ) -> OnboardingProject:
-    customer = db.query(Customer).filter(Customer.id == payload.customer_id).first()
+    customer = (
+        db.query(Customer)
+        .filter(Customer.id == payload.customer_id, Customer.owner_id == current_user)
+        .first()
+    )
     if not customer:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -65,19 +77,37 @@ def create_onboarding_project(
 
 @router.get("", response_model=list[ProjectRead])
 def list_projects(
-    skip: int = 0, limit: int = 50, db: Session = Depends(get_db)
+    skip: int = 0,
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ) -> list[OnboardingProject]:
-    return db.query(OnboardingProject).offset(skip).limit(limit).all()
+    return (
+        db.query(OnboardingProject)
+        .join(Customer, OnboardingProject.customer_id == Customer.id)
+        .filter(Customer.owner_id == current_user)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 
 @router.get("/{project_id}", response_model=ProjectDetail)
-def get_project(project_id: int, db: Session = Depends(get_db)) -> OnboardingProject:
-    return _get_project_or_404(db, project_id)
+def get_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> OnboardingProject:
+    return _get_project_or_404(db, project_id, current_user)
 
 
 @router.get("/{project_id}/tasks", response_model=list[TaskRead])
-def list_project_tasks(project_id: int, db: Session = Depends(get_db)):
-    project = _get_project_or_404(db, project_id)
+def list_project_tasks(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+):
+    project = _get_project_or_404(db, project_id, current_user)
     return project.tasks
 
 
@@ -86,9 +116,10 @@ def create_project_task(
     project_id: int,
     payload: TaskCreate,
     db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ):
     """Create a task manually on a project."""
-    project = _get_project_or_404(db, project_id)
+    project = _get_project_or_404(db, project_id, current_user)
     task = Task(
         project_id=project.id,
         stage=payload.stage,
@@ -107,26 +138,44 @@ def create_project_task(
 
 
 @router.get("/{project_id}/events", response_model=list[OnboardingEventRead])
-def list_project_events(project_id: int, db: Session = Depends(get_db)):
-    project = _get_project_or_404(db, project_id)
+def list_project_events(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+):
+    project = _get_project_or_404(db, project_id, current_user)
     return sorted(project.events, key=lambda e: e.created_at)
 
 
 @router.get("/{project_id}/recommendations", response_model=list[RecommendationRead])
-def list_project_recommendations(project_id: int, db: Session = Depends(get_db)):
-    project = _get_project_or_404(db, project_id)
+def list_project_recommendations(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+):
+    project = _get_project_or_404(db, project_id, current_user)
     return [r for r in project.recommendations if not r.dismissed]
 
 
-@router.post("/{project_id}/recommendations/{recommendation_id}/dismiss", response_model=RecommendationRead)
+@router.post(
+    "/{project_id}/recommendations/{recommendation_id}/dismiss",
+    response_model=RecommendationRead,
+)
 def dismiss_recommendation(
-    project_id: int, recommendation_id: int, db: Session = Depends(get_db)
+    project_id: int,
+    recommendation_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ):
-    project = _get_project_or_404(db, project_id)
-    rec = db.query(Recommendation).filter(
-        Recommendation.id == recommendation_id,
-        Recommendation.project_id == project_id,
-    ).first()
+    project = _get_project_or_404(db, project_id, current_user)
+    rec = (
+        db.query(Recommendation)
+        .filter(
+            Recommendation.id == recommendation_id,
+            Recommendation.project_id == project_id,
+        )
+        .first()
+    )
     if not rec:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found."
@@ -138,8 +187,12 @@ def dismiss_recommendation(
 
 
 @router.post("/{project_id}/check-overdue", response_model=OverdueCheckResponse)
-def check_overdue(project_id: int, db: Session = Depends(get_db)) -> OverdueCheckResponse:
-    project = _get_project_or_404(db, project_id)
+def check_overdue(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> OverdueCheckResponse:
+    project = _get_project_or_404(db, project_id, current_user)
     overdue_count, reminder_count = check_overdue_tasks(db, project)
     return OverdueCheckResponse(
         overdue_count=overdue_count,
@@ -154,8 +207,12 @@ def check_overdue(project_id: int, db: Session = Depends(get_db)) -> OverdueChec
 
 
 @router.get("/{project_id}/risk", response_model=RiskRead)
-def get_project_risk(project_id: int, db: Session = Depends(get_db)) -> RiskRead:
-    project = _get_project_or_404(db, project_id)
+def get_project_risk(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> RiskRead:
+    project = _get_project_or_404(db, project_id, current_user)
     score, level, explanations = compute_risk(db, project)
     return RiskRead(
         risk_score=score,
@@ -166,8 +223,12 @@ def get_project_risk(project_id: int, db: Session = Depends(get_db)) -> RiskRead
 
 
 @router.post("/{project_id}/risk/recalculate", response_model=RiskRead)
-def recalculate_project_risk(project_id: int, db: Session = Depends(get_db)) -> RiskRead:
-    project = _get_project_or_404(db, project_id)
+def recalculate_project_risk(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> RiskRead:
+    project = _get_project_or_404(db, project_id, current_user)
     score, level, explanations = recalculate_risk(db, project)
     return RiskRead(
         risk_score=score,
@@ -178,20 +239,23 @@ def recalculate_project_risk(project_id: int, db: Session = Depends(get_db)) -> 
 
 
 @router.get("/{project_id}/summary", response_model=ProjectSummaryResponse)
-def get_project_summary(project_id: int, db: Session = Depends(get_db)) -> ProjectSummaryResponse:
-    project = _get_project_or_404(db, project_id)
+def get_project_summary(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> ProjectSummaryResponse:
+    project = _get_project_or_404(db, project_id, current_user)
     return build_summary(project)
 
 
 @router.get("/{project_id}/risk/ai-summary", response_model=RiskSummaryResponse)
 def get_project_risk_ai_summary(
-    project_id: int, db: Session = Depends(get_db)
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
 ) -> RiskSummaryResponse:
-    """
-    AI-generated short summary for ops from project risk and summary.
-    Always returns 200; uses fallback text if LLM is unavailable.
-    """
-    project = _get_project_or_404(db, project_id)
+    """AI-generated short summary for ops from project risk and summary."""
+    project = _get_project_or_404(db, project_id, current_user)
     score, level, explanations = compute_risk(db, project)
     risk = RiskRead(
         risk_score=score,
@@ -203,8 +267,16 @@ def get_project_risk_ai_summary(
     project_context = {
         "name": project.name,
         "current_stage": project.current_stage.value if project.current_stage else None,
-        "target_go_live_date": project.target_go_live_date.date().isoformat() if project.target_go_live_date else None,
-        "notes": (project.notes[:200] + "…") if project.notes and len(project.notes) > 200 else project.notes,
+        "target_go_live_date": (
+            project.target_go_live_date.date().isoformat()
+            if project.target_go_live_date
+            else None
+        ),
+        "notes": (
+            (project.notes[:200] + "…")
+            if project.notes and len(project.notes) > 200
+            else project.notes
+        ),
         "company_name": project.customer.company_name if project.customer else None,
         "industry": getattr(project.customer, "industry", None) if project.customer else None,
         "blockers": [
@@ -220,8 +292,12 @@ def get_project_risk_ai_summary(
 
 
 @router.post("/{project_id}/advance-stage", response_model=dict)
-def advance_project_stage(project_id: int, db: Session = Depends(get_db)) -> dict:
-    project = _get_project_or_404(db, project_id)
+def advance_project_stage(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> dict:
+    project = _get_project_or_404(db, project_id, current_user)
     customer = project.customer
     if not customer:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Customer not found.")
@@ -233,15 +309,20 @@ def advance_project_stage(project_id: int, db: Session = Depends(get_db)) -> dic
         "message": (
             "Project completed."
             if project_completed
-            else f"Advanced to {new_stage.value}." if advanced
+            else f"Advanced to {new_stage.value}."
+            if advanced
             else "Stage gate not met; cannot advance.",
         ),
     }
 
 
 @router.post("/{project_id}/check-risk", response_model=RiskCheckResponse)
-def check_risk(project_id: int, db: Session = Depends(get_db)) -> RiskCheckResponse:
-    project = _get_project_or_404(db, project_id)
+def check_risk(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> RiskCheckResponse:
+    project = _get_project_or_404(db, project_id, current_user)
     risk_flag, was_already_flagged, reason = apply_risk_check(db, project)
     return RiskCheckResponse(
         risk_flag=risk_flag,
@@ -260,8 +341,17 @@ def check_risk(project_id: int, db: Session = Depends(get_db)) -> RiskCheckRespo
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_project(project_id: int, db: Session = Depends(get_db)) -> None:
-    project = db.query(OnboardingProject).filter(OnboardingProject.id == project_id).first()
+def delete_project(
+    project_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> None:
+    project = (
+        db.query(OnboardingProject)
+        .join(Customer, OnboardingProject.customer_id == Customer.id)
+        .filter(OnboardingProject.id == project_id, Customer.owner_id == current_user)
+        .first()
+    )
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Project not found."

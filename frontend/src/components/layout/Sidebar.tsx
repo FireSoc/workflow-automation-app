@@ -10,6 +10,7 @@ import {
   ChevronDown,
   ChevronRight,
   Wrench,
+  Columns2,
 } from 'lucide-react';
 import { AgileLogo } from '@/components/AgileLogo';
 import { Separator } from '@/components/ui/separator';
@@ -22,6 +23,7 @@ const CORE_NAV = [
 
 const WORKSPACE_NAV = [
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
+  { to: '/pipeline', icon: Columns2, label: 'Pipeline' },
   { to: '/customers', icon: Users, label: 'Customers' },
 ];
 
@@ -90,10 +92,10 @@ export function Sidebar() {
 
   return (
     <aside
-      className="flex w-14 flex-shrink-0 flex-col bg-[var(--sidebar)] text-[var(--sidebar-foreground)] md:w-56"
+      className="flex w-14 flex-shrink-0 flex-col border-r-[4px] border-border bg-[var(--sidebar)] text-[var(--sidebar-foreground)] md:w-56"
       aria-label="Main navigation"
     >
-      <div className="flex h-14 items-center gap-2 px-3 md:px-4">
+      <div className="flex h-16 items-center gap-2 px-3 md:px-4">
         <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden md:size-10">
           <AgileLogo size="sm" className="size-5 md:size-6" />
         </div>

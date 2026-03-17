@@ -81,6 +81,30 @@ uvicorn app.main:app --reload
 
 Interactive API docs: http://127.0.0.1:8000/docs
 
+### If you see "permission denied for table customers" (or other tables)
+
+The database user in `DATABASE_URL` (e.g. `agile`) must have INSERT/UPDATE/DELETE on all app tables. Run the grant script against the **agile** database as a user that can connect and has permission to grant (often your system user on macOS, or `postgres` on Linux/Docker).
+
+**From the `backend/` directory:**
+
+- **macOS** (Postgres.app, Homebrew): the `postgres` role often doesn't exist; use your Mac username (omit `-U`):
+  ```bash
+  psql -d agile -f scripts/grant_permissions.sql
+  ```
+- **Linux / Docker** (when `postgres` role exists):
+  ```bash
+  psql -U postgres -d agile -f scripts/grant_permissions.sql
+  ```
+
+If you get "role does not exist", run `psql -d agile -c '\du'` to list roles and use one that has superuser or can grant (e.g. your system username). Then run the same command with that user: `psql -U YOUR_USER -d agile -f scripts/grant_permissions.sql`.
+
+Or in `psql` after connecting to `agile`:
+
+```sql
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO agile;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO agile;
+```
+
 ---
 
 ## Running with Docker
@@ -91,13 +115,7 @@ From the **repo root**:
 docker compose up --build
 ```
 
-This starts PostgreSQL and the backend. The backend waits for the DB, runs `alembic upgrade head`, then serves the API at **http://localhost:8000**.
-
-To seed playbooks (optional), run once after the stack is up:
-
-```bash
-docker compose exec backend python scripts/seed_playbooks.py
-```
+This starts PostgreSQL and the backend. The backend waits for the DB, runs `alembic upgrade head`, then serves the API at **http://localhost:8000**. **Playbooks are seeded automatically on startup** so all users have access. To run the playbook seed script manually (optional, one-off): `docker compose exec backend python scripts/seed_playbooks.py`.
 
 Set `OPENAI_API_KEY` in your environment (or in `backend/.env`) if you use AI endpoints. Do not commit real secrets.
 

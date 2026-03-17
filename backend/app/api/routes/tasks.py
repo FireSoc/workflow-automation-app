@@ -1,7 +1,11 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_db
+from app.core.auth import get_current_user
+from app.models.customer import Customer
 from app.models.onboarding_project import OnboardingProject
 from app.models.task import Task
 from app.schemas.task import TaskCompleteResponse, TaskRead
@@ -11,7 +15,11 @@ router = APIRouter(prefix="/tasks", tags=["Tasks"])
 
 
 @router.post("/{task_id}/complete", response_model=TaskCompleteResponse)
-def mark_task_complete(task_id: int, db: Session = Depends(get_db)) -> TaskCompleteResponse:
+def mark_task_complete(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> TaskCompleteResponse:
     task = (
         db.query(Task)
         .options(selectinload(Task.project).selectinload(OnboardingProject.tasks))
@@ -19,6 +27,18 @@ def mark_task_complete(task_id: int, db: Session = Depends(get_db)) -> TaskCompl
         .first()
     )
     if not task:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Task not found."
+        )
+
+    # Verify the task's project belongs to the current user.
+    project_owner = (
+        db.query(Customer.owner_id)
+        .join(OnboardingProject, OnboardingProject.customer_id == Customer.id)
+        .filter(OnboardingProject.id == task.project_id)
+        .scalar()
+    )
+    if project_owner != current_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Task not found."
         )

@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
 
 @tailwind base;
 @tailwind components;
@@ -176,6 +175,11 @@
   }
   .section-gap {
     gap: var(--section-gap);
+  }
+  .font-heading {
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    font-weight: 600;
   }
   /* Minimal input/label utilities for legacy form fragments (BranchComparePanel, SimulationTaskEditor). Prefer shadcn Input/Label elsewhere. */
   .input-legacy {

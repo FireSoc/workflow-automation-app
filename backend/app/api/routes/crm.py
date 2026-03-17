@@ -1,9 +1,11 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db
+from app.core.auth import get_current_user
 from app.schemas.deal import DealIngestPayload, DealRead
-from app.schemas.project import ProjectRead
 from app.services.deal_ingestion_service import ingest_closed_won_deal
 
 router = APIRouter(prefix="/crm", tags=["CRM"])
@@ -15,7 +17,11 @@ router = APIRouter(prefix="/crm", tags=["CRM"])
     status_code=status.HTTP_201_CREATED,
     summary="Ingest closed-won deal and create onboarding project",
 )
-def ingest_deal(payload: DealIngestPayload, db: Session = Depends(get_db)) -> dict:
+def ingest_deal(
+    payload: DealIngestPayload,
+    db: Session = Depends(get_db),
+    current_user: uuid.UUID = Depends(get_current_user),
+) -> dict:
     """
     When a CRM deal is marked Closed Won, call this to:
     - Persist the deal
@@ -27,6 +33,7 @@ def ingest_deal(payload: DealIngestPayload, db: Session = Depends(get_db)) -> di
     try:
         deal, customer, project = ingest_closed_won_deal(
             db,
+            owner_id=current_user,
             crm_source=payload.crm_source,
             company_name=payload.company_name,
             segment=payload.segment,
@@ -42,6 +49,8 @@ def ingest_deal(payload: DealIngestPayload, db: Session = Depends(get_db)) -> di
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=f"Deal ingestion failed: {e!s}",
         ) from e
+
+    from app.schemas.project import ProjectRead
 
     return {
         "deal": DealRead.model_validate(deal),

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -52,7 +52,15 @@ import { Badge as ShadcnBadge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { RiskGauge, RiskScoreBadge } from '@/components/ui/RiskScoreBadge';
 import type { Task, OnboardingStage } from '../types';
 import { STAGE_ORDER, STAGE_LABELS } from '../types';
 
@@ -281,14 +289,17 @@ export function ProjectDetail() {
     if (!isNaN(projectId) && projectId > 0) riskSummaryMutation.mutate();
   }, [projectId]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!project) return;
     setPageLayout({
       title: projectName,
       action: (
-        <Link to="/simulator" className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')}>
+        <Link
+          to={`/simulator?projectId=${project.id}&tab=compare`}
+          className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'gap-1.5')}
+        >
           <FlaskConical className="size-4" />
-          Simulator
+          Compare with current
         </Link>
       ),
     });
@@ -335,38 +346,52 @@ export function ProjectDetail() {
           <Label htmlFor="project-detail-company" className="text-sm font-medium">
             Company
           </Label>
-          <select
-            id="project-detail-company"
-            value={project.customer_id}
-            onChange={(e) => handleCompanyChange(Number(e.target.value))}
-            aria-label="Switch company"
-            className="flex h-8 w-48 rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <Select
+            value={String(project.customer_id)}
+            onValueChange={(v) => handleCompanyChange(Number(v))}
           >
-            {(customers ?? []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.company_name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="project-detail-company"
+              size="sm"
+              className="w-48"
+              aria-label="Switch company"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(customers ?? []).map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.company_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Label htmlFor="project-detail-project" className="text-sm font-medium">
             Project
           </Label>
-          <select
-            id="project-detail-project"
-            value={project.id}
-            onChange={(e) => handleProjectChange(Number(e.target.value))}
-            aria-label="Switch project"
-            disabled={projectsForCompany.length === 0}
-            className="flex h-8 w-56 rounded-lg border border-input bg-background px-3 py-1.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          <Select
+            value={String(project.id)}
+            onValueChange={(v) => handleProjectChange(Number(v))}
           >
-            {projectsForCompany.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name ?? `${customerMap.get(p.customer_id)?.company_name ?? `Customer #${p.customer_id}`} — #${p.id}`}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="project-detail-project"
+              size="sm"
+              className="w-56"
+              aria-label="Switch project"
+              disabled={projectsForCompany.length === 0}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {projectsForCompany.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>
+                  {p.name ?? `${customerMap.get(p.customer_id)?.company_name ?? `Customer #${p.customer_id}`} — #${p.id}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <Link to="/projects/list" className="text-sm font-medium text-muted-foreground underline-offset-4 hover:underline inline-flex items-center gap-1">
           <ChevronLeft className="h-4 w-4" />
@@ -457,7 +482,7 @@ export function ProjectDetail() {
               </Card>
             </section>
 
-            {(project.risk_flag || (risk?.explanations?.length ?? 0) > 0) && (
+            {(project.risk_flag || risk != null || (riskSignals?.length ?? 0) > 0) && (
               <Card className="border-destructive/30 bg-destructive/5" aria-labelledby="risk-heading">
                 <CardHeader>
                   <CardTitle id="risk-heading" className="text-sm flex items-center gap-2">
@@ -465,12 +490,25 @@ export function ProjectDetail() {
                     Risk {risk?.risk_level && `(${risk.risk_level})`}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ul className="text-sm text-foreground list-disc list-inside space-y-0.5">
-                    {(risk?.explanations ?? riskSignals.map((s) => s.description)).map((text, i) => (
-                      <li key={i}>{text}</li>
-                    ))}
-                  </ul>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <RiskGauge
+                      score={risk?.risk_score ?? project.risk_score ?? null}
+                      className="flex-1 max-w-[8rem]"
+                    />
+                    <RiskScoreBadge
+                      score={risk?.risk_score ?? project.risk_score ?? null}
+                      level={risk?.risk_level ?? project.risk_level ?? undefined}
+                      showScore={true}
+                    />
+                  </div>
+                  {((risk?.explanations?.length ?? 0) > 0 || (riskSignals?.length ?? 0) > 0) && (
+                    <ul className="text-sm text-foreground list-disc list-inside space-y-0.5">
+                      {(risk?.explanations ?? riskSignals.map((s) => s.description)).map((text, i) => (
+                        <li key={i}>{text}</li>
+                      ))}
+                    </ul>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -728,16 +766,21 @@ export function ProjectDetail() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-task-stage">Stage</Label>
-                <select
-                  id="new-task-stage"
+                <Select
                   value={newTaskForm.stage}
-                  onChange={(e) => setNewTaskForm((f) => ({ ...f, stage: e.target.value as OnboardingStage }))}
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onValueChange={(v) => setNewTaskForm((f) => ({ ...f, stage: v as OnboardingStage }))}
                 >
-                  {STAGE_ORDER.map((s) => (
-                    <option key={s} value={s}>{STAGE_LABELS[s]}</option>
-                  ))}
-                </select>
+                  <SelectTrigger id="new-task-stage" className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STAGE_ORDER.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {STAGE_LABELS[s]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="new-task-description">Description (optional)</Label>

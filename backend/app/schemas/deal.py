@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
@@ -23,6 +24,7 @@ class DealRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    owner_id: uuid.UUID | None
     crm_source: str
     company_name: str
     segment: CustomerType

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, Package, Search, MoreHorizontal, Eye } from 'lucide-react';
 import { playbooksApi } from '../api/playbooks';
@@ -156,7 +156,7 @@ export function PlaybookInspector() {
   };
 
   const { setPageLayout } = usePageLayout();
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayout({
       title: 'Playbooks',
       subtitle: 'Onboarding playbooks by segment and their default stages and tasks.',

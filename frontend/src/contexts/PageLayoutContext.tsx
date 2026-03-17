@@ -2,7 +2,7 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -40,7 +40,7 @@ export function PageLayoutProvider({ children }: { children: ReactNode }) {
     setPageLayoutState((prev) => ({ ...prev, ...state }));
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPageLayoutState(defaultState);
   }, [location.pathname]);
 

@@ -10,6 +10,13 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type {
   SimulationCompareResponse,
   ComparisonSummary,
@@ -230,22 +237,31 @@ export function BranchEditor({ branches, baselineTasks, onChange }: BranchEditor
             <div className="space-y-2">
               {(branch.task_overrides ?? []).map((ov, j) => (
                 <div key={j} className="flex gap-2 items-center">
-                  <select
-                    className="select text-xs py-1 flex-1"
-                    value={ov.title}
-                    onChange={(e) => {
+                  <Select
+                    value={ov.title || ''}
+                    onValueChange={(v) => {
                       const newOvs = (branch.task_overrides ?? []).map((o, k) =>
-                        k === j ? { ...o, title: e.target.value } : o,
+                        k === j ? { ...o, title: v ?? '' } : o,
                       );
-                      updateBranch(i, { task_overrides: newOvs });
+                      updateBranch(i, { task_overrides: newOvs as SimulationTaskInput[] });
                     }}
-                    aria-label={`Override task ${j + 1} title`}
                   >
-                    <option value="">Select task…</option>
-                    {baselineTasks.map((t) => (
-                      <option key={t.title} value={t.title}>{t.title}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger
+                      size="sm"
+                      className="flex-1 text-xs h-7 min-w-0"
+                      aria-label={`Override task ${j + 1} title`}
+                    >
+                      <SelectValue placeholder="Select task…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Select task…</SelectItem>
+                      {baselineTasks.map((t) => (
+                        <SelectItem key={t.title} value={t.title}>
+                          {t.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <div className="flex items-center gap-1">
                     <label className="text-xs text-muted-foreground whitespace-nowrap">Due (days)</label>
                     <input
