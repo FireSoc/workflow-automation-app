@@ -24,15 +24,20 @@ class OnboardingProject(Base):
     )
     name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     current_stage: Mapped[OnboardingStage] = mapped_column(
-        Enum(OnboardingStage), nullable=False, default=OnboardingStage.KICKOFF
+        Enum(OnboardingStage, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=OnboardingStage.KICKOFF,
     )
     status: Mapped[ProjectStatus] = mapped_column(
-        Enum(ProjectStatus), nullable=False, default=ProjectStatus.ACTIVE
+        Enum(ProjectStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=ProjectStatus.ACTIVE,
     )
     risk_flag: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     risk_score: Mapped[int | None] = mapped_column(Integer, nullable=True)
     risk_level: Mapped[RiskLevel | None] = mapped_column(
-        Enum(RiskLevel), nullable=True
+        Enum(RiskLevel, values_callable=lambda x: [e.value for e in x]),
+        nullable=True,
     )
     kickoff_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

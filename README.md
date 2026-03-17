@@ -12,7 +12,7 @@ An AI-assisted onboarding ops co-pilot that helps teams run and automate custome
 | Layer   | Stack |
 |--------|--------|
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS, TanStack Query, React Router |
-| Backend  | FastAPI, SQLAlchemy 2, Pydantic v2, SQLite |
+| Backend  | FastAPI, SQLAlchemy 2, Pydantic v2, PostgreSQL |
 
 ---
 
@@ -22,17 +22,19 @@ Run **backend first**, then the **frontend**. Use the directories below; do not 
 
 ### 1. Backend
 
+You need a running **PostgreSQL** database. Create a database (e.g. `createdb agile`) and set `DATABASE_URL` in `backend/.env` (see `backend/.env.example`).
+
 ```bash
 cd backend
 python -m venv venv
 source venv/bin/activate   # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python main.py
+alembic upgrade head      # create tables
+uvicorn app.main:app --reload
 ```
 
 - API: **http://127.0.0.1:8000**  
-- Docs: **http://127.0.0.1:8000/docs**  
-- SQLite DB is created on first start.
+- Docs: **http://127.0.0.1:8000/docs**
 
 ### 2. Frontend
 
@@ -56,4 +58,4 @@ curl -X POST http://127.0.0.1:8000/seed
 
 ---
 
-See `PRODUCT_FOCUS.md` for product direction and `frontend/README.md` and `backend/README.md` for detailed setup and structure.
+See **Running with Docker** in `backend/README.md` for a one-command stack. See `PRODUCT_FOCUS.md` for product direction and `frontend/README.md` and `backend/README.md` for detailed setup and structure.

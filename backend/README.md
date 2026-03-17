@@ -11,7 +11,8 @@ A production-style FastAPI backend for automating customer onboarding workflows.
 | Framework | FastAPI |
 | ORM | SQLAlchemy 2.x (mapped columns) |
 | Validation | Pydantic v2 |
-| Database | SQLite (MVP) |
+| Database | PostgreSQL |
+| Migrations | Alembic |
 | Runtime | Python 3.12+ |
 
 ---
@@ -61,6 +62,8 @@ backend/
 
 ## Local setup
 
+You need **PostgreSQL** running locally (or a remote URL). Copy `backend/.env.example` to `backend/.env` and set `DATABASE_URL` (e.g. `postgresql://agile:agile@localhost:5432/agile`). Create the database if needed (e.g. `createdb agile`).
+
 ```bash
 # 1. From the backend/ directory, activate your virtual environment
 python -m venv venv
@@ -69,13 +72,34 @@ source venv/bin/activate        # Windows: venv\Scripts\activate
 # 2. Install dependencies
 pip install -r requirements.txt
 
-# 3. Start the server
+# 3. Run migrations (creates tables)
+alembic upgrade head
+
+# 4. Start the server
 uvicorn app.main:app --reload
 ```
 
-The SQLite database (`agile.db`) is created automatically on first startup.
-
 Interactive API docs: http://127.0.0.1:8000/docs
+
+---
+
+## Running with Docker
+
+From the **repo root**:
+
+```bash
+docker compose up --build
+```
+
+This starts PostgreSQL and the backend. The backend waits for the DB, runs `alembic upgrade head`, then serves the API at **http://localhost:8000**.
+
+To seed playbooks (optional), run once after the stack is up:
+
+```bash
+docker compose exec backend python scripts/seed_playbooks.py
+```
+
+Set `OPENAI_API_KEY` in your environment (or in `backend/.env`) if you use AI endpoints. Do not commit real secrets.
 
 ---
 

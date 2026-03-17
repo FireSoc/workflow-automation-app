@@ -21,7 +21,10 @@ class OnboardingEvent(Base):
     task_id: Mapped[int | None] = mapped_column(
         ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
     )
-    event_type: Mapped[EventType] = mapped_column(Enum(EventType), nullable=False)
+    event_type: Mapped[EventType] = mapped_column(
+        Enum(EventType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+    )
     message: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

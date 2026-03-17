@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
-from sqlalchemy.dialects.sqlite import JSON
+from sqlalchemy import DateTime, Enum, ForeignKey, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -17,7 +16,9 @@ class CRMDeal(Base):
     crm_source: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     segment: Mapped[CustomerType] = mapped_column(
-        Enum(CustomerType), nullable=False, index=True
+        Enum(CustomerType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        index=True,
     )
     products_purchased: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     target_go_live_date: Mapped[datetime | None] = mapped_column(
@@ -30,7 +31,10 @@ class CRMDeal(Base):
     csm_owner: Mapped[str | None] = mapped_column(String(255), nullable=True)
     special_requirements: Mapped[str | None] = mapped_column(Text, nullable=True)
     deal_status: Mapped[DealStatus] = mapped_column(
-        Enum(DealStatus), nullable=False, default=DealStatus.CLOSED_WON, index=True
+        Enum(DealStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=DealStatus.CLOSED_WON,
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

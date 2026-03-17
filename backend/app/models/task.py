@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text
-from sqlalchemy.dialects.sqlite import JSON
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -20,7 +19,8 @@ class Task(Base):
         index=True,
     )
     stage: Mapped[OnboardingStage] = mapped_column(
-        Enum(OnboardingStage), nullable=False
+        Enum(OnboardingStage, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -28,7 +28,9 @@ class Task(Base):
     owner_type: Mapped[str | None] = mapped_column(String(32), nullable=True)
     owner_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus), nullable=False, default=TaskStatus.NOT_STARTED
+        Enum(TaskStatus, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        default=TaskStatus.NOT_STARTED,
     )
     due_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True

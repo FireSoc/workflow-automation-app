@@ -22,7 +22,8 @@ class Recommendation(Base):
         ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
     )
     action_type: Mapped[RecommendationActionType] = mapped_column(
-        Enum(RecommendationActionType), nullable=False
+        Enum(RecommendationActionType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     dismissed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

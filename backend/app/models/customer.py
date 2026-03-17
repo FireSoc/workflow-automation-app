@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, String, Text
-from sqlalchemy.dialects.sqlite import JSON
+from sqlalchemy import DateTime, Enum, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -16,7 +15,8 @@ class Customer(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     company_name: Mapped[str] = mapped_column(String(255), nullable=False)
     customer_type: Mapped[CustomerType] = mapped_column(
-        Enum(CustomerType), nullable=False
+        Enum(CustomerType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
     )
     industry: Mapped[str | None] = mapped_column(String(255), nullable=True)
     primary_contacts: Mapped[list | None] = mapped_column(JSON, nullable=True)

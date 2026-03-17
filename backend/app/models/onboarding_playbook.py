@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Enum, String, Text
-from sqlalchemy.dialects.sqlite import JSON
+from sqlalchemy import DateTime, Enum, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -19,7 +18,9 @@ class OnboardingPlaybook(Base):
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     segment: Mapped[CustomerType] = mapped_column(
-        Enum(CustomerType), nullable=False, index=True
+        Enum(CustomerType, values_callable=lambda x: [e.value for e in x]),
+        nullable=False,
+        index=True,
     )
     supported_products: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     default_stages: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
