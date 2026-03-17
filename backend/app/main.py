@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    @app.get("/")
+    @app.api_route("/", methods=["GET", "HEAD"])
     def health():
         """Root health check for deployment (e.g. Render)."""
         return {"status": "ok"}
